@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Lock, User, ArrowRight } from 'lucide-react';
+import { API_BASE_URL } from '../constants';
 
 interface AuthProps {
   onLogin: (token: string, username: string) => void;
@@ -19,7 +20,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin }) => {
     setError('');
 
     const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-    const url = `https://sms-parser-qkzu.onrender.com${endpoint}`;
+    const url = `${API_BASE_URL}${endpoint}`;
 
     try {
       const res = await fetch(url, {

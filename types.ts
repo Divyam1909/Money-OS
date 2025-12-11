@@ -14,6 +14,8 @@ export interface UserProfile {
   monthlyIncome: number;
   currency: string;
   recurringExpenses: RecurringExpense[];
+  currentBalance?: number;
+  onboardingComplete?: boolean;
 }
 
 export interface Transaction {

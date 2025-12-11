@@ -1,25 +1,25 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Transaction, Budget, Persona, FirewallDecision } from '../types';
 import { checkTransactionWithFirewall } from '../services/geminiService';
 import { parseSMS } from '../services/smsParser';
-import { INITIAL_BUDGETS, INITIAL_TRANSACTIONS } from '../constants';
 import { ShieldCheck, ShieldAlert, ShieldBan, Bot, Send, CloudDownload, RefreshCw } from 'lucide-react';
+import { API_BASE_URL } from '../constants';
 
-const Transactions: React.FC = () => {
-  // Load initial state from LocalStorage if available, else use constants
-  const [transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem('moneyos_transactions');
-    return saved ? JSON.parse(saved) : INITIAL_TRANSACTIONS;
-  });
+interface TransactionsProps {
+    transactions: Transaction[];
+    budgets: Budget[];
+    token: string;
+    onUpdate: () => void;
+}
 
-  const [budgets] = useState<Budget[]>(INITIAL_BUDGETS);
+const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, token, onUpdate }) => {
   const [persona, setPersona] = useState<Persona>('BALANCED');
   
   // Form State
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(INITIAL_BUDGETS[0].category);
+  const [category, setCategory] = useState(budgets[0]?.category || 'Uncategorized');
   
   // Analysis State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -28,15 +28,10 @@ const Transactions: React.FC = () => {
   // Sync State
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Persist transactions whenever they change
-  useEffect(() => {
-    localStorage.setItem('moneyos_transactions', JSON.stringify(transactions));
-  }, [transactions]);
-
   const handleSyncSMS = async () => {
     setIsSyncing(true);
     try {
-        const response = await fetch('https://sms-parser-qkzu.onrender.com/api/sync-sms');
+        const response = await fetch(`${API_BASE_URL}/api/sync-sms`);
         const data = await response.json();
 
         if (data.success && data.messages.length > 0) {
@@ -46,19 +41,22 @@ const Transactions: React.FC = () => {
             data.messages.forEach((msg: any) => {
                 const parsed = parseSMS(msg);
                 if (parsed) {
-                    // Avoid duplicates based on ID
-                    if (!transactions.some(t => t.id === parsed.id)) {
-                        newTransactions.push(parsed);
-                        count++;
-                    }
+                    newTransactions.push(parsed);
+                    count++;
                 }
             });
 
             if (count > 0) {
-                setTransactions(prev => [...newTransactions, ...prev]);
+                // Save synced transactions to backend
+                await fetch(`${API_BASE_URL}/api/transactions/sync`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify({ transactions: newTransactions })
+                });
+                onUpdate();
                 alert(`Successfully synced ${count} financial transactions from ${data.count} SMS messages.`);
             } else {
-                alert(`Fetched ${data.count} messages, but no new financial transactions found.`);
+                alert(`Fetched ${data.count} messages, but no financial transactions found.`);
             }
         } else {
             alert("No new messages found on cloud.");
@@ -91,23 +89,33 @@ const Transactions: React.FC = () => {
     }
   };
 
-  const confirmTransaction = () => {
+  const confirmTransaction = async () => {
     if (!firewallResult) return;
     
-    const newTx: Transaction = {
-        id: Date.now().toString(),
+    const newTx: Omit<Transaction, 'id' | 'date'> = {
         amount: Number(amount),
         category,
         description,
-        date: new Date().toISOString().split('T')[0],
         firewallDecision: firewallResult.decision,
         firewallReason: firewallResult.reason
     };
     
-    setTransactions([newTx, ...transactions]);
-    setFirewallResult(null);
-    setAmount('');
-    setDescription('');
+    // Save to Backend
+    try {
+         await fetch(`${API_BASE_URL}/api/transactions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': token },
+            body: JSON.stringify({ 
+                transaction: { ...newTx, date: new Date().toISOString().split('T')[0], id: Date.now().toString() }
+            })
+        });
+        onUpdate();
+        setFirewallResult(null);
+        setAmount('');
+        setDescription('');
+    } catch (e) {
+        alert("Failed to save transaction");
+    }
   };
 
   const getDecisionColor = (decision?: FirewallDecision) => {
@@ -256,9 +264,9 @@ const Transactions: React.FC = () => {
                         onChange={(e) => setCategory(e.target.value)}
                         className="w-full bg-background border border-gray-600 rounded-xl p-2 focus:ring-2 focus:ring-accent focus:border-transparent outline-none"
                     >
-                        {budgets.map(b => (
+                        {budgets.length > 0 ? budgets.map(b => (
                             <option key={b.category} value={b.category}>{b.category}</option>
-                        ))}
+                        )) : <option value="Uncategorized">Uncategorized</option>}
                     </select>
                 </div>
 

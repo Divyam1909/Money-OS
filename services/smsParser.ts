@@ -1,9 +1,13 @@
+
 import { Transaction } from "../types";
 
 // Enhanced Regex patterns for Indian financial SMS
 const PATTERNS = {
   // Matches: Rs. 123, INR 123, 123.00, Rs 123
   AMOUNT: /(?:Rs\.?|INR|₹)\s*(\d+(?:,\d+)*(?:\.\d{2})?)/i,
+  
+  // Matches "debited 1000", "sent 500" - Contextual amount lookup
+  KEYWORD_AMOUNT: /(?:debited|credited|paid|sent|received|spent|withdraw|transfer|purchase of)\s+(?:of\s+)?(?:Rs\.?|INR|₹)?\s*(\d+(?:,\d+)*(?:\.\d{2})?)/i,
   
   // Matches keywords indicating spending
   DEBIT: /(?:debited|spent|paid|sent|txn|withdrawn|purchased|transfer)/i,
@@ -30,7 +34,13 @@ export const parseSMS = (sms: { body: string; receivedAt: string; _id: string; f
   if (IGNORE_KEYWORDS.some(k => lowerBody.includes(k))) return null;
 
   // 1. Check for Amount (Crucial)
-  const amountMatch = body.match(PATTERNS.AMOUNT);
+  let amountMatch = body.match(PATTERNS.AMOUNT);
+  
+  // Fallback: Check for keyword-based amount (e.g. "debited 1000")
+  if (!amountMatch) {
+    amountMatch = body.match(PATTERNS.KEYWORD_AMOUNT);
+  }
+
   if (!amountMatch) return null; 
 
   const amountString = amountMatch[1].replace(/,/g, '');

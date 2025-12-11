@@ -1,23 +1,41 @@
+
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { MOCK_AUTOPILOT_LOGS, INITIAL_BUDGETS } from '../constants';
+import { MOCK_AUTOPILOT_LOGS } from '../constants';
 import { TrendingUp, Zap, Users, Clock } from 'lucide-react';
+import { Transaction, Budget } from '../types';
 
-const Dashboard: React.FC = () => {
+interface DashboardProps {
+    transactions: Transaction[];
+    budgets: Budget[];
+}
+
+const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
   // Calculate total health
-  const totalLimit = INITIAL_BUDGETS.reduce((acc, b) => acc + b.limit, 0);
-  const totalSpent = INITIAL_BUDGETS.reduce((acc, b) => acc + b.spent, 0);
-  const healthPercentage = Math.round(((totalLimit - totalSpent) / totalLimit) * 100);
+  const totalLimit = budgets.reduce((acc, b) => acc + b.limit, 0);
+  const totalSpent = budgets.reduce((acc, b) => acc + b.spent, 0);
+  // Avoid divide by zero
+  const healthPercentage = totalLimit > 0 ? Math.round(((totalLimit - totalSpent) / totalLimit) * 100) : 100;
 
-  const chartData = [
-    { name: 'Mon', spend: 1200 },
-    { name: 'Tue', spend: 900 },
-    { name: 'Wed', spend: 2400 },
-    { name: 'Thu', spend: 1500 },
-    { name: 'Fri', spend: 3200 },
-    { name: 'Sat', spend: 4500 },
-    { name: 'Sun', spend: 2100 },
-  ];
+  // Generate chart data from real transactions
+  const processChartData = () => {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const data = days.map(d => ({ name: d, spend: 0 }));
+      
+      const last7Days = new Date();
+      last7Days.setDate(last7Days.getDate() - 7);
+
+      transactions.forEach(t => {
+          const tDate = new Date(t.date);
+          if (tDate > last7Days) {
+              const dayIndex = tDate.getDay();
+              data[dayIndex].spend += t.amount;
+          }
+      });
+      return data;
+  };
+
+  const chartData = processChartData();
 
   return (
     <div className="space-y-6">
@@ -40,34 +58,18 @@ const Dashboard: React.FC = () => {
               style={{ width: `${healthPercentage}%` }}
             ></div>
           </div>
-          <p className="text-xs text-gray-500 mt-2">Projected to save ₹4,500 this month.</p>
+          <p className="text-xs text-gray-500 mt-2">
+              {totalSpent} spent of {totalLimit} limit.
+          </p>
         </div>
 
-        {/* Upcoming Bills */}
+        {/* Upcoming Bills (Placeholder logic until Recurring is integrated fully into dashboard) */}
         <div className="bg-surface border border-gray-700 rounded-2xl p-6">
             <h3 className="text-gray-400 text-sm font-semibold mb-4">UPCOMING BILLS</h3>
             <div className="space-y-3">
-                <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-warning"></div>
-                        <span>Rent</span>
-                    </div>
-                    <span className="font-mono">₹12,000</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-primary"></div>
-                        <span>Internet</span>
-                    </div>
-                    <span className="font-mono">₹999</span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 rounded-full bg-accent"></div>
-                        <span>Netflix</span>
-                    </div>
-                    <span className="font-mono">₹649</span>
-                </div>
+                 <div className="text-gray-500 text-sm text-center py-4">
+                    Check Settings for Recurring Expenses
+                 </div>
             </div>
         </div>
 
@@ -97,8 +99,7 @@ const Dashboard: React.FC = () => {
                     <Users size={16} className="text-primary" />
                     GROUP DEBT
                 </h3>
-                <p className="text-2xl font-bold text-white">₹1,250</p>
-                <p className="text-xs text-gray-500">You are owed by 2 people</p>
+                <p className="text-sm text-gray-400">Manage group expenses in the Groups tab.</p>
             </div>
             <div className="text-right">
                 <button className="text-primary text-sm font-bold hover:underline">View Groups</button>
@@ -112,18 +113,14 @@ const Dashboard: React.FC = () => {
                     <Clock size={16} className="text-accent" />
                     EFFICIENCY SCORE
                 </h3>
-                <p className="text-2xl font-bold text-white">78/100</p>
-                <p className="text-xs text-gray-500">2 subscriptions marked 'low value'</p>
+                <p className="text-sm text-gray-400">Analyze subscriptions in Time-Value tab.</p>
             </div>
-             <div className="w-16 h-16 rounded-full border-4 border-accent/30 flex items-center justify-center">
-                 <span className="text-accent font-bold">B+</span>
-             </div>
         </div>
       </div>
 
       {/* Main Chart */}
       <div className="bg-surface border border-gray-700 rounded-2xl p-6">
-        <h3 className="text-gray-400 text-sm font-semibold mb-6">SPENDING TREND</h3>
+        <h3 className="text-gray-400 text-sm font-semibold mb-6">SPENDING TREND (LAST 7 DAYS)</h3>
         <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>

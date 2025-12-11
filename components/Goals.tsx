@@ -1,11 +1,18 @@
+
 import React, { useState } from 'react';
 import { Target, Calculator, AlertTriangle, CheckCircle } from 'lucide-react';
-import { INITIAL_GOALS, INITIAL_BUDGETS } from '../constants';
 import { analyzeGoal } from '../services/geminiService';
-import { Goal, GoalAnalysisResponse } from '../types';
+import { Goal, GoalAnalysisResponse, Budget } from '../types';
+import { API_BASE_URL } from '../constants';
 
-const Goals: React.FC = () => {
-  const [goals, setGoals] = useState<Goal[]>(INITIAL_GOALS);
+interface GoalsProps {
+    goals: Goal[];
+    budgets: Budget[];
+    token: string;
+    onUpdate: () => void;
+}
+
+const Goals: React.FC<GoalsProps> = ({ goals, budgets, token, onUpdate }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   
   // Form
@@ -19,7 +26,7 @@ const Goals: React.FC = () => {
     setIsAnalyzing(true);
     setAnalysis(null);
     try {
-        const result = await analyzeGoal(name, Number(target), 0, deadline, INITIAL_BUDGETS);
+        const result = await analyzeGoal(name, Number(target), 0, deadline, budgets);
         setAnalysis(result);
     } catch (e) {
         console.error(e);
@@ -29,9 +36,9 @@ const Goals: React.FC = () => {
     }
   };
 
-  const addGoal = () => {
+  const addGoal = async () => {
     if (!analysis) return;
-    const newGoal: Goal = {
+    const newGoal = {
         id: Date.now().toString(),
         name,
         targetAmount: Number(target),
@@ -39,11 +46,21 @@ const Goals: React.FC = () => {
         deadline,
         status: analysis.feasibility === 'Impossible' || analysis.feasibility === 'Hard' ? 'At Risk' : 'On Track'
     };
-    setGoals([...goals, newGoal]);
-    setAnalysis(null);
-    setName('');
-    setTarget('');
-    setDeadline('');
+
+    try {
+        await fetch(`${API_BASE_URL}/api/goals`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': token },
+            body: JSON.stringify({ goal: newGoal })
+        });
+        onUpdate();
+        setAnalysis(null);
+        setName('');
+        setTarget('');
+        setDeadline('');
+    } catch (e) {
+        alert("Failed to save goal.");
+    }
   };
 
   return (
@@ -55,6 +72,7 @@ const Goals: React.FC = () => {
             <span>Your Savings Goals</span>
         </h2>
         <div className="space-y-4">
+            {goals.length === 0 && <p className="text-gray-500">No active goals.</p>}
             {goals.map(goal => {
                 const percent = Math.min((goal.savedAmount / goal.targetAmount) * 100, 100);
                 return (

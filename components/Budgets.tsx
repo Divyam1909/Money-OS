@@ -1,18 +1,25 @@
+
 import React, { useState } from 'react';
-import { INITIAL_BUDGETS, INITIAL_TRANSACTIONS } from '../constants';
-import { Budget, BudgetsResponse } from '../types';
+import { Budget, BudgetsResponse, Transaction } from '../types';
 import { runShiftBudget } from '../services/geminiService';
 import { ArrowRight, RefreshCw, CheckCircle } from 'lucide-react';
+import { API_BASE_URL } from '../constants';
 
-const Budgets: React.FC = () => {
-  const [budgets, setBudgets] = useState<Budget[]>(INITIAL_BUDGETS);
+interface BudgetsProps {
+    budgets: Budget[];
+    transactions: Transaction[];
+    token: string;
+    onUpdate: () => void;
+}
+
+const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdate }) => {
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [suggestion, setSuggestion] = useState<BudgetsResponse | null>(null);
 
   const handleShiftBudget = async () => {
     setIsAdjusting(true);
     try {
-        const result = await runShiftBudget(budgets, INITIAL_TRANSACTIONS);
+        const result = await runShiftBudget(budgets, transactions.slice(0, 20)); // Analyze recent txns
         setSuggestion(result);
     } catch (e) {
         console.error(e);
@@ -22,16 +29,25 @@ const Budgets: React.FC = () => {
     }
   };
 
-  const applyChanges = () => {
+  const applyChanges = async () => {
     if (!suggestion) return;
     
     const newBudgets = budgets.map(b => {
         const adj = suggestion.adjustments.find(a => a.category === b.category);
         return adj ? { ...b, limit: adj.newLimit } : b;
     });
-    
-    setBudgets(newBudgets);
-    setSuggestion(null);
+
+    try {
+        await fetch(`${API_BASE_URL}/api/budgets`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': token },
+            body: JSON.stringify({ budgets: newBudgets })
+        });
+        onUpdate();
+        setSuggestion(null);
+    } catch (e) {
+        alert("Failed to update budgets");
+    }
   };
 
   return (
@@ -56,8 +72,9 @@ const Budgets: React.FC = () => {
         <div className="bg-surface border border-gray-700 rounded-2xl p-6">
             <h3 className="font-bold mb-4 text-gray-300">CURRENT WEEKLY ALLOCATION</h3>
             <div className="space-y-4">
+                {budgets.length === 0 && <p className="text-gray-500">No budgets set.</p>}
                 {budgets.map((b) => {
-                    const percent = Math.min((b.spent / b.limit) * 100, 100);
+                    const percent = b.limit > 0 ? Math.min((b.spent / b.limit) * 100, 100) : 0;
                     const color = percent > 90 ? 'bg-danger' : percent > 70 ? 'bg-warning' : 'bg-success';
                     
                     return (

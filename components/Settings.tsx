@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, CreditCard, DollarSign, Activity } from 'lucide-react';
 import { RecurringExpense } from '../types';
+import { API_BASE_URL } from '../constants';
 
 const Settings: React.FC = () => {
     const [income, setIncome] = useState<string>('');
@@ -24,7 +25,7 @@ const Settings: React.FC = () => {
         if (!token) return;
 
         try {
-            const res = await fetch('https://sms-parser-qkzu.onrender.com/api/user/settings', {
+            const res = await fetch(`${API_BASE_URL}/api/user/settings`, {
                 headers: { 'Authorization': token }
             });
             const data = await res.json();
@@ -43,7 +44,7 @@ const Settings: React.FC = () => {
 
         setLoading(true);
         try {
-            const res = await fetch('https://sms-parser-qkzu.onrender.com/api/user/settings', {
+            const res = await fetch(`${API_BASE_URL}/api/user/settings`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',

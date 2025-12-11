@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { generateMonthlyInsights } from '../services/geminiService';
-import { InsightReport } from '../types';
-import { INITIAL_TRANSACTIONS, INITIAL_BUDGETS } from '../constants';
+import { InsightReport, Transaction, Budget } from '../types';
 import { BrainCircuit, TrendingUp, AlertOctagon, Lightbulb, Radar, ArrowRight } from 'lucide-react';
 
-const Insights: React.FC = () => {
+interface InsightsProps {
+    transactions: Transaction[];
+    budgets: Budget[];
+}
+
+const Insights: React.FC<InsightsProps> = ({ transactions, budgets }) => {
   const [report, setReport] = useState<InsightReport | null>(null);
   const [loading, setLoading] = useState(false);
 
   const handleGenerate = async () => {
     setLoading(true);
     try {
-        const data = await generateMonthlyInsights(INITIAL_TRANSACTIONS, INITIAL_BUDGETS);
+        const data = await generateMonthlyInsights(transactions, budgets);
         setReport(data);
     } catch (e) {
         console.error(e);

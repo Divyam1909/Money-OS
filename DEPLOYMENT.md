@@ -1,3 +1,4 @@
+
 # 🚀 How to Deploy MoneyOS for Free
 
 This guide will help you deploy the Frontend (React) and Backend (Node.js/Express) completely for free using **Vercel** and **Render**.
@@ -21,12 +22,6 @@ This guide will help you deploy the Frontend (React) and Backend (Node.js/Expres
 We will deploy `server.js` as a web service.
 
 1.  **Prepare Repository:**
-    *   Create a `package.json` in your root if you haven't already. Ensure it has:
-        ```json
-        "scripts": {
-          "start": "node server.js"
-        }
-        ```
     *   Push your code to GitHub.
 
 2.  **Deploy on Render:**
@@ -43,9 +38,6 @@ We will deploy `server.js` as a web service.
     *   Click **Create Web Service**.
     *   Once live, copy your backend URL (e.g., `https://moneyos-api.onrender.com`).
 
-3.  **Update Frontend Code:**
-    *   In `components/Auth.tsx` and `components/Transactions.tsx`, replace `http://localhost:3001` with your new Render URL.
-
 ---
 
 ## Part 3: Frontend Deployment (Vercel)
@@ -56,18 +48,24 @@ We will deploy `server.js` as a web service.
     *   Import your GitHub repository.
     *   **Build Settings:**
         *   Framework Preset: Create React App (or Vite, depending on your setup).
-        *   Build Command: `npm run build` (or `npm run build` depending on bundler).
-        *   Output Directory: `build` (or `dist`).
+        *   Build Command: `npm run build`.
+        *   Output Directory: `dist`.
     *   **Environment Variables:**
         *   Key: `API_KEY` | Value: (Your Gemini API Key)
     *   Click **Deploy**.
 
 ---
 
-## Summary
+## Part 4: 🔄 Updating & Connecting (CRITICAL)
 
-1.  **MongoDB** stores your data.
-2.  **Render** runs your Node.js server (`server.js`).
-3.  **Vercel** hosts your React Frontend.
+After deploying both parts, you must connect them.
 
-Enjoy your deployed Financial Operating System! 🚀
+1.  **Get your Backend URL** from the Render Dashboard (e.g., `https://my-app.onrender.com`).
+2.  **Update `constants.ts`** in your code:
+    *   Change `export const API_BASE_URL = "..."` to your new Render URL.
+3.  **Commit and Push** this change to GitHub.
+4.  **Vercel will automatically redeploy** your frontend with the new configuration.
+
+**How to Update in the Future:**
+*   To update code: Just `git push`. Render and Vercel auto-deploy on push.
+*   To update secrets: Go to the "Environment Variables" section in the respective dashboard and Redeploy.
