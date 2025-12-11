@@ -1,0 +1,5 @@
+{
+  "name": "MoneyOS",
+  "description": "A comprehensive AI-powered personal finance operating system featuring a spending firewall, auto-adjusting budgets, and time-value analysis.",
+  "requestFramePermissions": []
+}
