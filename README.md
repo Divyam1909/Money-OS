@@ -1,3 +1,4 @@
+
 # MoneyOS - AI Financial Operating System
 
 ## Feature Checklist
@@ -77,3 +78,52 @@
 - [x] Budget drift graph/analysis
 - [x] Overspending triggers detected
 - [x] Behavioral notes (Gemini-generated)
+
+---
+
+## 📱 SMS Parsing Guide
+
+MoneyOS uses a Regex-based engine tailored for Indian banking SMS formats. Here is what works:
+
+### ✅ Supported Formats
+The parser looks for keywords (debited, paid, spent) combined with currency symbols (Rs., INR, ₹).
+
+1.  **Bank Debits:**
+    *   "Rs. 500 debited from a/c 1234 at Zomato on 12-05-24."
+    *   "INR 1200.50 spent on your HDFC Card ending 8899 at STARBUCKS."
+
+2.  **UPI Transactions:**
+    *   "Paid Rs 250 to rahul@upi. Ref 123456."
+    *   "Debited ₹1500; VPA: landlord@okicici."
+
+3.  **Credit Alerts:**
+    *   "Your a/c is credited with Rs 50,000 (Salary)."
+
+4.  **Wallet Usage:**
+    *   "Paytm: Paid Rs 40 for Uber."
+
+### ❌ What is Ignored
+To prevent spam and false positives, the system ignores messages containing:
+*   OTP, Verification Code, Login
+*   Plan Expiring, Recharge Offers
+*   Loan Approvals (Spam)
+
+---
+
+## 🔮 Roadmap & Suggestions
+
+1.  **Receipt Scanning (Gemini Vision)**
+    *   Allow users to upload photos of physical receipts. Use Gemini 2.5 Flash to extract line items and totals automatically.
+
+2.  **Voice Input Command**
+    *   Add a microphone button to the Dashboard.
+    *   "I just spent 500 rupees on a Taxi." -> Auto-creates transaction.
+
+3.  **Visual Category Breakdown**
+    *   Add a Donut Chart to the Dashboard to visualize % spend per category (Food vs Transport vs Savings).
+
+4.  **PWA (Progressive Web App)**
+    *   Make the site installable on mobile phones so users can access it like a native app.
+
+5.  **Recurring Subscription Detection**
+    *   If the AI sees "Netflix" or "Spotify" in transactions every month, auto-add it to the "Recurring Expenses" settings.

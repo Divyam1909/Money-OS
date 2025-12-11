@@ -1,97 +1,142 @@
 
 import { Transaction } from "../types";
 
-// Enhanced Regex patterns for Indian financial SMS
-const PATTERNS = {
-  // Matches: Rs. 123, INR 123, 123.00, Rs 123
-  AMOUNT: /(?:Rs\.?|INR|₹)\s*(\d+(?:,\d+)*(?:\.\d{2})?)/i,
-  
-  // Matches "debited 1000", "sent 500" - Contextual amount lookup
-  KEYWORD_AMOUNT: /(?:debited|credited|paid|sent|received|spent|withdraw|transfer|purchase of)\s+(?:of\s+)?(?:Rs\.?|INR|₹)?\s*(\d+(?:,\d+)*(?:\.\d{2})?)/i,
-  
-  // Matches keywords indicating spending
-  DEBIT: /(?:debited|spent|paid|sent|txn|withdrawn|purchased|transfer)/i,
-  
-  // Matches keywords indicating income
-  CREDIT: /(?:credited|received|deposited|added|refunded)/i,
-  
-  // Matches Merchant/Entity
-  // 1. Matches "at Zomato", "to Ramesh"
-  MERCHANT_AT: /(?:at|to|info)\s+([A-Za-z0-9\s\.\-_&]+?)(?:\s+on|\s+ref|\s+txn|\.$|$)/i,
-  // 2. Matches UPI IDs
-  MERCHANT_VPA: /(?:VPA|UPI|ref)\s*[:\-]?\s*([a-zA-Z0-9\.\@]+)/i,
-  // 3. Matches specific bank formats "Info: <Merchant>"
-  MERCHANT_INFO: /(?:Info|Msg)\s*[:\-]\s*([A-Za-z0-9\s]+)/i
+// --- CONFIGURATION ---
+
+const IGNORE_KEYWORDS = [
+  'otp', 'verification', 'code', 'expire', 'loan', 'offer', 'approve', 
+  'request', 'balance', 'outstanding', 'due', 'login'
+];
+
+// Expanded Category Map
+const CATEGORY_MAP: Record<string, string[]> = {
+  'Food & Dining': ['zomato', 'swiggy', 'pizza', 'burger', 'kfc', 'mcdonalds', 'starbucks', 'cafe', 'coffee', 'restaurant', 'dining', 'food', 'bakery', 'blinkit', 'zepto'],
+  'Transportation': ['uber', 'ola', 'rapido', 'petrol', 'fuel', 'pump', 'shell', 'indian oil', 'hpcl', 'bpcl', 'metro', 'toll', 'parking', 'fastag'],
+  'Entertainment': ['netflix', 'spotify', 'youtube', 'prime', 'hotstar', 'cinema', 'movie', 'bookmyshow', 'pvr', 'inox', 'theatre', 'game', 'steam', 'playstation'],
+  'Shopping': ['amazon', 'flipkart', 'myntra', 'ajio', 'zara', 'h&m', 'uniqlo', 'decathlon', 'retail', 'store', 'fashion', 'cloth', 'mall', 'mart', 'supermarket'],
+  'Utilities': ['electricity', 'power', 'bescom', 'water', 'gas', 'bill', 'recharge', 'jio', 'airtel', 'vi', 'vodafone', 'bsnl', 'broadband', 'internet', 'wifi'],
+  'Health': ['pharmacy', 'medical', 'hospital', 'clinic', 'doctor', 'apollo', '1mg', 'pharmeasy', 'medplus'],
+  'Travel': ['irctc', 'rail', 'flight', 'indigo', 'air india', 'makemytrip', 'hotel', 'booking.com', 'airbnb', 'goibibo']
 };
 
-const IGNORE_KEYWORDS = ['otp', 'verification', 'code', 'expire', 'loan', 'offer', 'approve'];
+// --- UTILITIES ---
+
+/**
+ * Generates a simple hash from string to deduplicate SMS
+ */
+const generateHash = (str: string): string => {
+  let hash = 0;
+  if (str.length === 0) return hash.toString();
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16);
+};
+
+/**
+ * Normalizes text: removes special chars, extra spaces, lowercases
+ */
+const normalizeText = (text: string): string => {
+  return text
+    .replace(/[^\w\s.,₹\-@]/gi, ' ') // Keep only essential chars
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+// --- MAIN PARSER ---
 
 export const parseSMS = (sms: { body: string; receivedAt: string; _id: string; from: string }): Transaction | null => {
-  const body = sms.body;
-  const lowerBody = body.toLowerCase();
+  const originalBody = sms.body;
+  const cleanBody = normalizeText(originalBody);
+  const lowerBody = cleanBody.toLowerCase();
 
-  // 0. Filter Spam/OTPs
+  // 1. 🛡️ Spam Filter
   if (IGNORE_KEYWORDS.some(k => lowerBody.includes(k))) return null;
 
-  // 1. Check for Amount (Crucial)
-  let amountMatch = body.match(PATTERNS.AMOUNT);
+  // 2. 💰 Amount Extraction
+  // Priority 1: Look for "Rs. X" or "INR X" or "₹X" specifically
+  // Handles 1,200.50 and 1200
+  const amountRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/i;
+  const keywordAmountRegex = /(?:debited|credited|paid|spent|sent|received)\s+(?:by|of)?\s*(?:rs\.?|inr|₹)?\s*([\d,]+(?:\.\d{1,2})?)/i;
   
-  // Fallback: Check for keyword-based amount (e.g. "debited 1000")
-  if (!amountMatch) {
-    amountMatch = body.match(PATTERNS.KEYWORD_AMOUNT);
+  let amountMatch = cleanBody.match(amountRegex) || cleanBody.match(keywordAmountRegex);
+  
+  if (!amountMatch) return null;
+
+  let amountStr = amountMatch[1].replace(/,/g, ''); // Remove commas
+  const amount = parseFloat(amountStr);
+
+  if (isNaN(amount) || amount === 0) return null;
+
+  // 3. 💳 Determine Type (Debit vs Credit)
+  let type: 'DEBIT' | 'CREDIT' = 'DEBIT'; // Default
+  
+  if (
+    lowerBody.includes('credited') || 
+    lowerBody.includes('received') || 
+    lowerBody.includes('refund') || 
+    lowerBody.includes('reversed') ||
+    lowerBody.includes('deposited')
+  ) {
+    type = 'CREDIT';
   }
 
-  if (!amountMatch) return null; 
-
-  const amountString = amountMatch[1].replace(/,/g, '');
-  const amount = parseFloat(amountString);
-  if (isNaN(amount)) return null;
-
-  // 2. Determine Type (Debit vs Credit)
-  const isDebit = PATTERNS.DEBIT.test(body);
-  const isCredit = PATTERNS.CREDIT.test(body);
-
-  if (!isDebit && !isCredit) return null; // Ambiguous message
-
-  // 3. Extract Merchant / Description
+  // 4. 🏪 Merchant / Description Extraction (Chain of Responsibility)
   let description = "Unknown Transaction";
-  
-  const merchantVpa = body.match(PATTERNS.MERCHANT_VPA);
-  const merchantAt = body.match(PATTERNS.MERCHANT_AT);
-  const merchantInfo = body.match(PATTERNS.MERCHANT_INFO);
 
-  if (merchantVpa) {
-    description = `UPI: ${merchantVpa[1]}`;
-  } else if (merchantAt) {
-    description = merchantAt[1].trim();
-  } else if (merchantInfo) {
-    description = merchantInfo[1].trim();
+  // Pattern A: VPA/UPI (High confidence)
+  const vpaMatch = cleanBody.match(/(?:vpa|upi|ref)[\s\-:]*([a-zA-Z0-9.\-_]+@[a-zA-Z]+)/i);
+  
+  // Pattern B: At/To/Info (Medium confidence)
+  const merchantMatch = cleanBody.match(/(?:at|to|info|msg)\s+([a-zA-Z0-9\s&]+?)(?:\s+(?:on|ref|txn|is)|$)/i);
+  
+  if (vpaMatch) {
+    description = `UPI: ${vpaMatch[1]}`;
+  } else if (merchantMatch) {
+    description = merchantMatch[1].trim();
   } else {
-    // Fallback: Use the sender name/number (e.g., AD-HDFC)
-    description = `Txn via ${sms.from || 'Bank'}`;
+    // Fallback: Use sender ID
+    description = sms.from || "Bank Transaction";
   }
 
   // Cleanup description
-  description = description.replace(/[.,]*$/, '').trim();
+  description = description.substring(0, 30).trim(); // Truncate
 
-  // 4. Categorize (Simple Rule-based)
+  // 5. 🏷️ Categorization
   let category = "Uncategorized";
-  const lowerDesc = description.toLowerCase();
   
-  if (lowerDesc.includes('zomato') || lowerDesc.includes('swiggy') || lowerDesc.includes('food') || lowerDesc.includes('burger') || lowerDesc.includes('pizza')) category = 'Food & Dining';
-  else if (lowerDesc.includes('uber') || lowerDesc.includes('ola') || lowerDesc.includes('petrol') || lowerDesc.includes('fuel') || lowerDesc.includes('shell')) category = 'Transportation';
-  else if (lowerDesc.includes('netflix') || lowerDesc.includes('spotify') || lowerDesc.includes('movie') || lowerDesc.includes('cinema') || lowerDesc.includes('prime')) category = 'Entertainment';
-  else if (lowerDesc.includes('amazon') || lowerDesc.includes('flipkart') || lowerDesc.includes('myntra') || lowerDesc.includes('zara') || lowerDesc.includes('uniqlo')) category = 'Shopping';
-  else if (lowerDesc.includes('bill') || lowerDesc.includes('electricity') || lowerDesc.includes('recharge') || lowerDesc.includes('jio') || lowerDesc.includes('airtel')) category = 'Utilities';
-  else if (lowerDesc.includes('upi') && amount > 2000) category = 'Transfer/Rent'; // Heuristic
+  if (type === 'CREDIT') {
+    category = "Income";
+  } else {
+    // Check keywords
+    for (const [cat, keywords] of Object.entries(CATEGORY_MAP)) {
+      if (keywords.some(k => lowerBody.includes(k) || description.toLowerCase().includes(k))) {
+        category = cat;
+        break;
+      }
+    }
+    // Fallback heuristic for large UPI
+    if (category === "Uncategorized" && description.includes("UPI") && amount > 5000) {
+        category = "Transfer/Rent";
+    }
+  }
 
-  // 5. Construct Transaction
+  // 6. 🆔 Deduplication Hash
+  // Hash combined of: Amount + Description + Date (YYYY-MM-DD) + Sender
+  const dateStr = new Date(sms.receivedAt).toISOString().split('T')[0];
+  const hashString = `${amount}-${description}-${dateStr}-${sms.from}`;
+  const hash = generateHash(hashString);
+
   return {
-    id: sms._id || Date.now().toString() + Math.random(),
+    id: hash, // Use hash as ID for frontend key
+    hash: hash,
+    type: type,
     amount: amount,
     category: category,
     description: description,
-    date: new Date(sms.receivedAt).toISOString().split('T')[0],
+    date: dateStr,
     firewallDecision: 'ALLOW', 
     firewallReason: 'Imported from SMS'
   };

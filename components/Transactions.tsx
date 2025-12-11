@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Transaction, Budget, Persona, FirewallDecision } from '../types';
 import { checkTransactionWithFirewall } from '../services/geminiService';
 import { parseSMS } from '../services/smsParser';
-import { ShieldCheck, ShieldAlert, ShieldBan, Bot, Send, CloudDownload, RefreshCw } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldBan, Bot, Send, CloudDownload, RefreshCw, ClipboardPlus, X, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
 
 interface TransactionsProps {
@@ -20,6 +20,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState(budgets[0]?.category || 'Uncategorized');
+  const [type, setType] = useState<'DEBIT' | 'CREDIT'>('DEBIT');
   
   // Analysis State
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -27,6 +28,10 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
 
   // Sync State
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  // Paste Modal State
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pastedSMS, setPastedSMS] = useState('');
 
   const handleSyncSMS = async () => {
     setIsSyncing(true);
@@ -48,13 +53,15 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
 
             if (count > 0) {
                 // Save synced transactions to backend
-                await fetch(`${API_BASE_URL}/api/transactions/sync`, {
+                const syncRes = await fetch(`${API_BASE_URL}/api/transactions/sync`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
                     body: JSON.stringify({ transactions: newTransactions })
                 });
+                const syncData = await syncRes.json();
+                
                 onUpdate();
-                alert(`Successfully synced ${count} financial transactions from ${data.count} SMS messages.`);
+                alert(`Synced ${syncData.added || count} new transactions from cloud.`);
             } else {
                 alert(`Fetched ${data.count} messages, but no financial transactions found.`);
             }
@@ -69,14 +76,47 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
     }
   };
 
+  const handleManualParse = async () => {
+      if (!pastedSMS) return;
+      
+      // Create a mock SMS object
+      const mockMsg = {
+          body: pastedSMS,
+          receivedAt: new Date().toISOString(),
+          _id: Date.now().toString(),
+          from: "ManualPaste"
+      };
+
+      const parsed = parseSMS(mockMsg);
+
+      if (parsed) {
+          // Auto-fill the form with parsed data
+          setAmount(parsed.amount.toString());
+          setDescription(parsed.description);
+          setCategory(parsed.category);
+          setType(parsed.type);
+          setShowPasteModal(false);
+          setPastedSMS('');
+          alert(`SMS Parsed! Type: ${parsed.type}, Amount: ${parsed.amount}`);
+      } else {
+          alert("Could not extract transaction details.");
+      }
+  };
+
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !description) return;
+    
+    // Skip firewall for credits
+    if (type === 'CREDIT') {
+        confirmTransaction();
+        return;
+    }
 
     setIsAnalyzing(true);
     try {
         const result = await checkTransactionWithFirewall(
-            { amount: Number(amount), category, description },
+            { amount: Number(amount), category, description, type: 'DEBIT' }, // Explicitly pass type context if needed
             budgets,
             persona
         );
@@ -90,14 +130,13 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
   };
 
   const confirmTransaction = async () => {
-    if (!firewallResult) return;
-    
-    const newTx: Omit<Transaction, 'id' | 'date'> = {
+    const newTx: Partial<Transaction> = {
         amount: Number(amount),
         category,
         description,
-        firewallDecision: firewallResult.decision,
-        firewallReason: firewallResult.reason
+        type,
+        firewallDecision: firewallResult?.decision || 'ALLOW',
+        firewallReason: firewallResult?.reason || (type === 'CREDIT' ? 'Income' : 'Manual Entry')
     };
     
     // Save to Backend
@@ -128,7 +167,31 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-8rem)] relative">
+      {/* Paste Modal Overlay */}
+      {showPasteModal && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm rounded-2xl">
+              <div className="bg-surface border border-gray-700 p-6 rounded-2xl w-96 shadow-2xl">
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-bold text-lg">Paste SMS Text</h3>
+                      <button onClick={() => setShowPasteModal(false)}><X size={20} /></button>
+                  </div>
+                  <textarea 
+                      value={pastedSMS}
+                      onChange={e => setPastedSMS(e.target.value)}
+                      placeholder="e.g. Rs. 500 debited from HDFC Bank for Zomato..."
+                      className="w-full h-32 bg-background border border-gray-600 rounded-xl p-3 text-sm outline-none mb-4 resize-none"
+                  />
+                  <button 
+                      onClick={handleManualParse}
+                      className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-2 rounded-xl"
+                  >
+                      Parse & Auto-fill
+                  </button>
+              </div>
+          </div>
+      )}
+
       {/* Transaction Feed */}
       <div className="lg:col-span-2 bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col">
         <div className="flex justify-between items-center mb-4">
@@ -136,14 +199,23 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
                 <ShieldCheck className="text-primary" />
                 <span>Transaction Log</span>
             </h2>
-            <button 
-                onClick={handleSyncSMS}
-                disabled={isSyncing}
-                className="bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50"
-            >
-                <CloudDownload size={14} className={isSyncing ? 'animate-bounce' : ''} />
-                <span>{isSyncing ? 'Syncing...' : 'Sync SMS from Cloud'}</span>
-            </button>
+            <div className="flex space-x-2">
+                <button 
+                    onClick={() => setShowPasteModal(true)}
+                    className="bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center space-x-2 transition-all"
+                >
+                    <ClipboardPlus size={14} />
+                    <span className="hidden sm:inline">Paste SMS</span>
+                </button>
+                <button 
+                    onClick={handleSyncSMS}
+                    disabled={isSyncing}
+                    className="bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50"
+                >
+                    <CloudDownload size={14} className={isSyncing ? 'animate-bounce' : ''} />
+                    <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Cloud Sync'}</span>
+                </button>
+            </div>
         </div>
         
         <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
@@ -156,15 +228,20 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
             {transactions.map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl border border-gray-800 hover:border-gray-600 transition-colors">
                     <div>
-                        <div className="font-semibold">{tx.description}</div>
-                        <div className="text-xs text-gray-500">{tx.category} • {tx.date}</div>
-                        {tx.firewallReason && tx.firewallReason !== 'Imported from SMS' && (
-                             <div className="text-[10px] text-gray-400 mt-1 italic">AI: {tx.firewallReason}</div>
+                        <div className="flex items-center gap-2">
+                            {tx.type === 'CREDIT' ? <ArrowDownLeft size={16} className="text-success" /> : <ArrowUpRight size={16} className="text-gray-400" />}
+                            <div className="font-semibold">{tx.description}</div>
+                        </div>
+                        <div className="text-xs text-gray-500 pl-6">{tx.category} • {tx.date}</div>
+                        {tx.firewallReason && tx.firewallReason !== 'Imported from SMS' && tx.type !== 'CREDIT' && (
+                             <div className="text-[10px] text-gray-400 mt-1 italic pl-6">AI: {tx.firewallReason}</div>
                         )}
                     </div>
                     <div className="text-right">
-                        <div className="font-mono font-bold">₹{tx.amount}</div>
-                        {tx.firewallDecision && (
+                        <div className={`font-mono font-bold ${tx.type === 'CREDIT' ? 'text-success' : 'text-white'}`}>
+                            {tx.type === 'CREDIT' ? '+' : '-'}₹{tx.amount}
+                        </div>
+                        {tx.firewallDecision && tx.type === 'DEBIT' && (
                             <div className={`text-xs px-2 py-0.5 rounded-full inline-block border mt-1 ${getDecisionColor(tx.firewallDecision)}`}>
                                 {tx.firewallDecision}
                             </div>
@@ -232,6 +309,23 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
         ) : (
             /* Input Form */
             <form onSubmit={handleAnalyze} className="space-y-4 flex-1">
+                <div className="flex gap-2 mb-2 bg-background p-1 rounded-lg">
+                    <button 
+                        type="button"
+                        onClick={() => setType('DEBIT')}
+                        className={`flex-1 py-1 text-xs font-bold rounded ${type === 'DEBIT' ? 'bg-danger text-white' : 'text-gray-500'}`}
+                    >
+                        Expense
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={() => setType('CREDIT')}
+                        className={`flex-1 py-1 text-xs font-bold rounded ${type === 'CREDIT' ? 'bg-success text-white' : 'text-gray-500'}`}
+                    >
+                        Income
+                    </button>
+                </div>
+
                 <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1">AMOUNT</label>
                     <div className="relative">
@@ -253,7 +347,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         className="w-full bg-background border border-gray-600 rounded-xl p-2 focus:ring-2 focus:ring-accent focus:border-transparent outline-none"
-                        placeholder="What are you buying?"
+                        placeholder={type === 'DEBIT' ? "What did you buy?" : "Source of income?"}
                     />
                 </div>
 
@@ -267,6 +361,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
                         {budgets.length > 0 ? budgets.map(b => (
                             <option key={b.category} value={b.category}>{b.category}</option>
                         )) : <option value="Uncategorized">Uncategorized</option>}
+                        <option value="Income">Income</option>
+                        <option value="Transfer">Transfer</option>
                     </select>
                 </div>
 
@@ -281,7 +377,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
                         ) : (
                             <>
                                 <Bot size={18} />
-                                <span>Check with Firewall</span>
+                                <span>{type === 'DEBIT' ? 'Check with Firewall' : 'Add Income'}</span>
                             </>
                         )}
                     </button>

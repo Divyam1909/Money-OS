@@ -12,6 +12,7 @@ const Settings: React.FC = () => {
     const [newName, setNewName] = useState('');
     const [newAmount, setNewAmount] = useState('');
     const [newDate, setNewDate] = useState('1');
+    const [newFreq, setNewFreq] = useState<'Monthly' | 'Yearly' | 'Weekly'>('Monthly');
 
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
@@ -73,12 +74,14 @@ const Settings: React.FC = () => {
             id: Date.now().toString(),
             name: newName,
             amount: Number(newAmount),
-            date: Number(newDate)
+            date: Number(newDate),
+            frequency: newFreq
         };
         setRecurring([...recurring, newItem]);
         setNewName('');
         setNewAmount('');
         setNewDate('1');
+        setNewFreq('Monthly');
     };
 
     const removeRecurring = (id: string) => {
@@ -86,7 +89,12 @@ const Settings: React.FC = () => {
     };
 
     // Calculations
-    const totalFixed = recurring.reduce((acc, item) => acc + item.amount, 0);
+    const totalFixed = recurring.reduce((acc, item) => {
+        if (item.frequency === 'Yearly') return acc + (item.amount / 12);
+        if (item.frequency === 'Weekly') return acc + (item.amount * 4);
+        return acc + item.amount;
+    }, 0);
+
     const numIncome = Number(income) || 0;
     const freeCashFlow = numIncome - totalFixed;
     const healthScore = numIncome > 0 ? Math.round((freeCashFlow / numIncome) * 100) : 0;
@@ -133,16 +141,18 @@ const Settings: React.FC = () => {
                                 />
                                 <input 
                                     className="w-24 bg-surface border border-gray-700 rounded-lg p-2 text-sm outline-none focus:border-primary"
-                                    placeholder="Amount"
+                                    placeholder="Amt"
                                     type="number"
                                     value={newAmount} onChange={e => setNewAmount(e.target.value)}
                                 />
-                                <input 
-                                    className="w-16 bg-surface border border-gray-700 rounded-lg p-2 text-sm outline-none focus:border-primary"
-                                    placeholder="Day"
-                                    type="number" max="31" min="1"
-                                    value={newDate} onChange={e => setNewDate(e.target.value)}
-                                />
+                                <select
+                                    className="w-24 bg-surface border border-gray-700 rounded-lg p-2 text-xs outline-none focus:border-primary"
+                                    value={newFreq} onChange={e => setNewFreq(e.target.value as any)}
+                                >
+                                    <option value="Monthly">Monthly</option>
+                                    <option value="Yearly">Yearly</option>
+                                    <option value="Weekly">Weekly</option>
+                                </select>
                             </div>
                             <button 
                                 onClick={addRecurring}
@@ -159,7 +169,7 @@ const Settings: React.FC = () => {
                                         <div className="w-2 h-2 rounded-full bg-warning"></div>
                                         <div>
                                             <div className="font-bold text-sm">{item.name}</div>
-                                            <div className="text-xs text-gray-500">Day {item.date} of month</div>
+                                            <div className="text-xs text-gray-500">{item.frequency}</div>
                                         </div>
                                     </div>
                                     <div className="flex items-center space-x-3">
@@ -197,16 +207,16 @@ const Settings: React.FC = () => {
                 <div className="space-y-6 z-10">
                     <div className="flex justify-between items-end border-b border-gray-700 pb-2">
                         <span className="text-gray-400">Total Income</span>
-                        <span className="text-2xl font-bold text-success">+ ₹{numIncome}</span>
+                        <span className="text-2xl font-bold text-success">+ ₹{numIncome.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between items-end border-b border-gray-700 pb-2">
-                        <span className="text-gray-400">Fixed Obligations</span>
-                        <span className="text-2xl font-bold text-danger">- ₹{totalFixed}</span>
+                        <span className="text-gray-400">Fixed Obligations (Monthly Avg)</span>
+                        <span className="text-2xl font-bold text-danger">- ₹{totalFixed.toFixed(0)}</span>
                     </div>
                     
                     <div className="bg-background/50 p-6 rounded-2xl border border-gray-600 mt-4">
                         <div className="text-sm text-gray-400 font-bold uppercase mb-1">Free Cash Flow (Discretionary)</div>
-                        <div className="text-4xl font-bold text-white mb-2">₹{freeCashFlow}</div>
+                        <div className="text-4xl font-bold text-white mb-2">₹{freeCashFlow.toFixed(0)}</div>
                         <div className="text-xs text-gray-500">
                             This is the actual amount available for your daily budgets (Food, Transport, etc.) after bills are paid.
                         </div>

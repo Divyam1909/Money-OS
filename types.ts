@@ -8,6 +8,7 @@ export interface RecurringExpense {
   name: string;
   amount: number;
   date: number; // Day of month (1-31)
+  frequency: 'Weekly' | 'Monthly' | 'Yearly';
 }
 
 export interface UserProfile {
@@ -20,6 +21,8 @@ export interface UserProfile {
 
 export interface Transaction {
   id: string;
+  hash?: string; // Unique fingerprint for deduplication
+  type: 'DEBIT' | 'CREDIT'; // Income or Expense
   amount: number;
   category: string;
   description: string;
@@ -29,6 +32,7 @@ export interface Transaction {
 }
 
 export interface Budget {
+  _id?: string; // MongoDB ID
   category: string;
   limit: number;
   spent: number;

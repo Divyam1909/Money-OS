@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { Budget, BudgetsResponse, Transaction } from '../types';
 import { runShiftBudget } from '../services/geminiService';
-import { ArrowRight, RefreshCw, CheckCircle } from 'lucide-react';
+import { ArrowRight, RefreshCw, CheckCircle, Plus, Trash2, Edit2, X, Save } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
 
 interface BudgetsProps {
@@ -15,6 +15,15 @@ interface BudgetsProps {
 const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdate }) => {
   const [isAdjusting, setIsAdjusting] = useState(false);
   const [suggestion, setSuggestion] = useState<BudgetsResponse | null>(null);
+
+  // Manual Editing States
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editLimit, setEditLimit] = useState('');
+  
+  // Add New State
+  const [showAdd, setShowAdd] = useState(false);
+  const [newCat, setNewCat] = useState('');
+  const [newLimit, setNewLimit] = useState('');
 
   const handleShiftBudget = async () => {
     setIsAdjusting(true);
@@ -50,38 +59,138 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
     }
   };
 
+  const deleteBudget = async (id: string) => {
+      if(!confirm("Are you sure you want to delete this budget category?")) return;
+      try {
+          await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
+              method: 'DELETE',
+              headers: { 'Authorization': token }
+          });
+          onUpdate();
+      } catch (e) {
+          alert("Delete failed");
+      }
+  };
+
+  const saveEdit = async (b: Budget) => {
+      try {
+          await fetch(`${API_BASE_URL}/api/budgets`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': token },
+              body: JSON.stringify({ budgets: [{ ...b, limit: Number(editLimit) }] })
+          });
+          setEditingId(null);
+          onUpdate();
+      } catch (e) {
+          alert("Update failed");
+      }
+  };
+
+  const addNewBudget = async () => {
+      if(!newCat || !newLimit) return;
+      try {
+           await fetch(`${API_BASE_URL}/api/budgets`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': token },
+              body: JSON.stringify({ budgets: [{ category: newCat, limit: Number(newLimit), spent: 0 }] })
+          });
+          setNewCat('');
+          setNewLimit('');
+          setShowAdd(false);
+          onUpdate();
+      } catch (e) {
+          alert("Add failed");
+      }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-4">
         <div>
             <h2 className="text-2xl font-bold">ShiftBudget Engine</h2>
             <p className="text-gray-400 text-sm">Adaptive budgeting based on your spending behavior.</p>
         </div>
-        <button 
-            onClick={handleShiftBudget}
-            disabled={isAdjusting}
-            className="bg-accent hover:bg-violet-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50"
-        >
-            <RefreshCw size={18} className={isAdjusting ? "animate-spin" : ""} />
-            <span>{isAdjusting ? 'Calculating...' : 'Run Auto-Adjust'}</span>
-        </button>
+        <div className="flex gap-2">
+            <button 
+                onClick={() => setShowAdd(!showAdd)}
+                className="bg-gray-700 hover:bg-white hover:text-black text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all font-bold"
+            >
+                <Plus size={18} />
+                <span>Add Budget</span>
+            </button>
+            <button 
+                onClick={handleShiftBudget}
+                disabled={isAdjusting}
+                className="bg-accent hover:bg-violet-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50 font-bold"
+            >
+                <RefreshCw size={18} className={isAdjusting ? "animate-spin" : ""} />
+                <span>{isAdjusting ? 'Calculating...' : 'Run Auto-Adjust'}</span>
+            </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Current Budgets */}
         <div className="bg-surface border border-gray-700 rounded-2xl p-6">
-            <h3 className="font-bold mb-4 text-gray-300">CURRENT WEEKLY ALLOCATION</h3>
-            <div className="space-y-4">
+            <h3 className="font-bold mb-4 text-gray-300 uppercase tracking-wider text-sm">Allocations</h3>
+            
+            {showAdd && (
+                <div className="mb-4 p-3 bg-background border border-gray-600 rounded-xl flex gap-2 items-center animate-in fade-in slide-in-from-top-2">
+                    <input 
+                        placeholder="Category Name" 
+                        value={newCat} onChange={e => setNewCat(e.target.value)}
+                        className="flex-1 bg-surface rounded p-2 text-sm outline-none"
+                    />
+                    <input 
+                        type="number" placeholder="Limit" 
+                        value={newLimit} onChange={e => setNewLimit(e.target.value)}
+                        className="w-24 bg-surface rounded p-2 text-sm outline-none"
+                    />
+                    <button onClick={addNewBudget} className="bg-success p-2 rounded text-black"><CheckCircle size={16} /></button>
+                </div>
+            )}
+
+            <div className="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
                 {budgets.length === 0 && <p className="text-gray-500">No budgets set.</p>}
                 {budgets.map((b) => {
                     const percent = b.limit > 0 ? Math.min((b.spent / b.limit) * 100, 100) : 0;
                     const color = percent > 90 ? 'bg-danger' : percent > 70 ? 'bg-warning' : 'bg-success';
-                    
+                    const isEditing = editingId === b._id;
+
                     return (
-                        <div key={b.category}>
-                            <div className="flex justify-between text-sm mb-1">
-                                <span>{b.category}</span>
-                                <span className="font-mono text-gray-400">{b.spent} / {b.limit}</span>
+                        <div key={b._id || b.category} className="group">
+                            <div className="flex justify-between text-sm mb-1 items-center">
+                                <span className="font-bold">{b.category}</span>
+                                <div className="flex items-center gap-3">
+                                    {isEditing ? (
+                                        <div className="flex items-center gap-1">
+                                            <input 
+                                                autoFocus
+                                                type="number" 
+                                                value={editLimit} 
+                                                onChange={e => setEditLimit(e.target.value)}
+                                                className="w-20 bg-background border border-gray-600 rounded px-1 py-0.5 text-right font-mono"
+                                            />
+                                            <button onClick={() => saveEdit(b)} className="text-success hover:text-emerald-400"><Save size={14} /></button>
+                                            <button onClick={() => setEditingId(null)} className="text-gray-500 hover:text-white"><X size={14} /></button>
+                                        </div>
+                                    ) : (
+                                        <span className="font-mono text-gray-400">
+                                            ₹{b.spent} / <span className="text-white">₹{b.limit}</span>
+                                        </span>
+                                    )}
+                                    
+                                    {!isEditing && (
+                                        <div className="opacity-0 group-hover:opacity-100 flex gap-2 transition-opacity">
+                                            <button onClick={() => { setEditingId(b._id!); setEditLimit(b.limit.toString()); }} className="text-gray-500 hover:text-primary">
+                                                <Edit2 size={12} />
+                                            </button>
+                                            <button onClick={() => deleteBudget(b._id!)} className="text-gray-500 hover:text-danger">
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <div className="h-2 w-full bg-gray-700 rounded-full">
                                 <div className={`h-2 rounded-full ${color}`} style={{ width: `${percent}%` }}></div>
@@ -100,7 +209,7 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
                     <p>Run Auto-Adjust to see AI recommendations.</p>
                 </div>
             ) : (
-                <div className="animate-in fade-in slide-in-from-right duration-300">
+                <div className="animate-in fade-in slide-in-from-right duration-300 w-full">
                     <h3 className="font-bold mb-2 text-accent">PROPOSED CHANGES</h3>
                     <p className="text-sm text-gray-400 mb-4 italic">"{suggestion.summary}"</p>
                     

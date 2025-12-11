@@ -1,12 +1,15 @@
+
 import React, { useState } from 'react';
-import { INITIAL_SUBSCRIPTIONS } from '../constants';
 import { analyzeTimeValue } from '../services/geminiService';
-import { TimeValueAnalysis } from '../types';
+import { TimeValueAnalysis, UserProfile } from '../types';
 import { Clock, TrendingDown, Star, Package, Monitor } from 'lucide-react';
 
-const TimeValue: React.FC = () => {
+interface TimeValueProps {
+    userSettings: UserProfile | null;
+}
+
+const TimeValue: React.FC<TimeValueProps> = ({ userSettings }) => {
   const [activeTab, setActiveTab] = useState<'subs' | 'items'>('subs');
-  const [subscriptions] = useState(INITIAL_SUBSCRIPTIONS);
   const [selectedSubId, setSelectedSubId] = useState<string | null>(null);
   const [analysis, setAnalysis] = useState<TimeValueAnalysis | null>(null);
   const [loading, setLoading] = useState(false);
@@ -17,6 +20,9 @@ const TimeValue: React.FC = () => {
   const [itemUsage, setItemUsage] = useState('');
   const [itemResult, setItemResult] = useState<TimeValueAnalysis | null>(null);
 
+  // Use real data or empty
+  const subscriptions = userSettings?.recurringExpenses || [];
+
   const handleAnalyzeSub = async (subId: string) => {
     const sub = subscriptions.find(s => s.id === subId);
     if (!sub) return;
@@ -26,7 +32,9 @@ const TimeValue: React.FC = () => {
     setAnalysis(null);
     
     try {
-        const result = await analyzeTimeValue(sub.name, sub.cost, sub.hoursUsedPerMonth, sub.frequency);
+        // Assume simplified hours if not tracked
+        const hoursEstimated = sub.frequency === 'Yearly' ? 10 : 20; 
+        const result = await analyzeTimeValue(sub.name, sub.amount, hoursEstimated, sub.frequency);
         setAnalysis(result);
     } catch (e) {
         console.error(e);
@@ -78,38 +86,41 @@ const TimeValue: React.FC = () => {
                             <Clock className="text-warning" />
                             <span>Active Subscriptions</span>
                         </h2>
-                        <div className="space-y-3">
-                            {subscriptions.map(sub => {
-                                const costPerHour = (sub.cost / sub.hoursUsedPerMonth).toFixed(1);
-                                const isSelected = selectedSubId === sub.id;
+                        {subscriptions.length === 0 ? (
+                            <div className="text-center text-gray-500 py-10">
+                                <p>No recurring expenses found.</p>
+                                <p className="text-xs mt-2">Add them in Settings or re-run setup.</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                {subscriptions.map(sub => {
+                                    const isSelected = selectedSubId === sub.id;
 
-                                return (
-                                    <div 
-                                        key={sub.id} 
-                                        onClick={() => handleAnalyzeSub(sub.id)}
-                                        className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                                            isSelected 
-                                            ? 'bg-primary/20 border-primary' 
-                                            : 'bg-background border-gray-700 hover:border-gray-500'
-                                        }`}
-                                    >
-                                        <div className="flex justify-between items-start mb-2">
-                                            <h3 className="font-bold text-lg">{sub.name}</h3>
-                                            <div className="text-right">
-                                                <div className="font-mono font-bold">₹{sub.cost}</div>
-                                                <div className="text-xs text-gray-500">{sub.frequency}</div>
+                                    return (
+                                        <div 
+                                            key={sub.id} 
+                                            onClick={() => handleAnalyzeSub(sub.id)}
+                                            className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                                                isSelected 
+                                                ? 'bg-primary/20 border-primary' 
+                                                : 'bg-background border-gray-700 hover:border-gray-500'
+                                            }`}
+                                        >
+                                            <div className="flex justify-between items-start mb-2">
+                                                <h3 className="font-bold text-lg">{sub.name}</h3>
+                                                <div className="text-right">
+                                                    <div className="font-mono font-bold">₹{sub.amount}</div>
+                                                    <div className="text-xs text-gray-500">{sub.frequency}</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between text-sm text-gray-400">
+                                                <span>Click to analyze value</span>
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-between text-sm text-gray-400">
-                                            <span>{sub.hoursUsedPerMonth} hrs/mo usage</span>
-                                            <span className="text-white bg-gray-700 px-2 py-1 rounded">
-                                                ₹{costPerHour}/hr
-                                            </span>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {/* Details Panel */}

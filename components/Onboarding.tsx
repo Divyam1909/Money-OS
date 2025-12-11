@@ -12,12 +12,14 @@ interface OnboardingProps {
 const Onboarding: React.FC<OnboardingProps> = ({ token, onComplete }) => {
     const [step, setStep] = useState(1);
     const [income, setIncome] = useState('');
+    const [incomeFreq, setIncomeFreq] = useState('Monthly'); // Monthly, Yearly
     const [balance, setBalance] = useState('');
     const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
     
     // Recurring Form
     const [recName, setRecName] = useState('');
     const [recAmount, setRecAmount] = useState('');
+    const [recFreq, setRecFreq] = useState<'Monthly' | 'Yearly' | 'Weekly'>('Monthly');
 
     const [loading, setLoading] = useState(false);
 
@@ -28,23 +30,28 @@ const Onboarding: React.FC<OnboardingProps> = ({ token, onComplete }) => {
             id: Date.now().toString(),
             name: recName,
             amount: Number(recAmount),
-            date: 1
+            date: 1,
+            frequency: recFreq
         }]);
         setRecName('');
         setRecAmount('');
+        setRecFreq('Monthly');
     };
 
     const finishOnboarding = async () => {
         setLoading(true);
         try {
+            // Calculate Monthly Normalized Income for Backend
+            let monthlyIncomeVal = Number(income);
+            if (incomeFreq === 'Yearly') monthlyIncomeVal = monthlyIncomeVal / 12;
+
             // Generate basic 50/30/20 style budgets
-            const monthly = Number(income);
             const initialBudgets: Budget[] = [
-                { category: 'Food & Dining', limit: monthly * 0.15, spent: 0 },
-                { category: 'Transportation', limit: monthly * 0.10, spent: 0 },
-                { category: 'Entertainment', limit: monthly * 0.05, spent: 0 },
-                { category: 'Shopping', limit: monthly * 0.10, spent: 0 },
-                { category: 'Utilities', limit: monthly * 0.10, spent: 0 },
+                { category: 'Food & Dining', limit: monthlyIncomeVal * 0.15, spent: 0 },
+                { category: 'Transportation', limit: monthlyIncomeVal * 0.10, spent: 0 },
+                { category: 'Entertainment', limit: monthlyIncomeVal * 0.05, spent: 0 },
+                { category: 'Shopping', limit: monthlyIncomeVal * 0.10, spent: 0 },
+                { category: 'Utilities', limit: monthlyIncomeVal * 0.10, spent: 0 },
             ];
 
             const res = await fetch(`${API_BASE_URL}/api/onboarding`, {
@@ -54,7 +61,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ token, onComplete }) => {
                     'Authorization': token 
                 },
                 body: JSON.stringify({
-                    monthlyIncome: monthly,
+                    monthlyIncome: monthlyIncomeVal,
                     currentBalance: Number(balance),
                     recurringExpenses: recurring,
                     initialBudgets: initialBudgets
@@ -87,14 +94,24 @@ const Onboarding: React.FC<OnboardingProps> = ({ token, onComplete }) => {
                         <div className="flex items-center space-x-4 bg-background/50 p-4 rounded-xl border border-gray-600">
                             <DollarSign className="text-success" size={28} />
                             <div className="flex-1">
-                                <label className="block text-xs font-bold text-gray-500 mb-1">MONTHLY INCOME</label>
-                                <input 
-                                    type="number" 
-                                    value={income}
-                                    onChange={e => setIncome(e.target.value)}
-                                    placeholder="50000"
-                                    className="w-full bg-transparent text-xl font-bold outline-none"
-                                />
+                                <label className="block text-xs font-bold text-gray-500 mb-1">INCOME</label>
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="number" 
+                                        value={income}
+                                        onChange={e => setIncome(e.target.value)}
+                                        placeholder="50000"
+                                        className="flex-1 bg-transparent text-xl font-bold outline-none"
+                                    />
+                                    <select 
+                                        value={incomeFreq}
+                                        onChange={e => setIncomeFreq(e.target.value)}
+                                        className="bg-gray-700 text-sm rounded-lg px-2 outline-none"
+                                    >
+                                        <option value="Monthly">Monthly</option>
+                                        <option value="Yearly">Yearly</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
 
@@ -132,9 +149,12 @@ const Onboarding: React.FC<OnboardingProps> = ({ token, onComplete }) => {
 
                          <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                              {recurring.map((item, idx) => (
-                                 <div key={idx} className="flex justify-between p-3 bg-background rounded-lg border border-gray-700">
+                                 <div key={idx} className="flex justify-between items-center p-3 bg-background rounded-lg border border-gray-700">
                                      <span>{item.name}</span>
-                                     <span className="font-mono">₹{item.amount}</span>
+                                     <div className="flex items-center gap-2">
+                                         <span className="font-mono">₹{item.amount}</span>
+                                         <span className="text-xs bg-gray-700 px-1 rounded">{item.frequency}</span>
+                                     </div>
                                  </div>
                              ))}
                              {recurring.length === 0 && <div className="text-center text-gray-500 text-sm py-4">No recurring expenses added.</div>}
@@ -150,8 +170,17 @@ const Onboarding: React.FC<OnboardingProps> = ({ token, onComplete }) => {
                                 type="number"
                                 value={recAmount} onChange={e => setRecAmount(e.target.value)}
                                 placeholder="Amount"
-                                className="w-24 bg-background border border-gray-600 rounded-lg p-2 text-sm outline-none"
+                                className="w-20 bg-background border border-gray-600 rounded-lg p-2 text-sm outline-none"
                              />
+                             <select 
+                                value={recFreq} 
+                                onChange={(e) => setRecFreq(e.target.value as any)}
+                                className="w-24 bg-background border border-gray-600 rounded-lg p-2 text-xs outline-none"
+                             >
+                                <option value="Monthly">Monthly</option>
+                                <option value="Yearly">Yearly</option>
+                                <option value="Weekly">Weekly</option>
+                             </select>
                              <button onClick={addRecurring} className="bg-gray-700 hover:bg-white hover:text-black p-2 rounded-lg font-bold">+</button>
                          </div>
 

@@ -95,7 +95,7 @@ const App: React.FC = () => {
       case 'transactions': return <Transactions transactions={transactions} budgets={budgets} token={token!} onUpdate={refreshData} />;
       case 'budgets': return <Budgets budgets={budgets} transactions={transactions} token={token!} onUpdate={refreshData} />;
       case 'groups': return <SmartSplit />;
-      case 'timevalue': return <TimeValue />;
+      case 'timevalue': return <TimeValue userSettings={userSettings} />;
       case 'goals': return <Goals goals={goals} budgets={budgets} token={token!} onUpdate={refreshData} />;
       case 'insights': return <Insights transactions={transactions} budgets={budgets} />;
       case 'settings': return <Settings />;
