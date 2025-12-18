@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, CreditCard, DollarSign, Activity } from 'lucide-react';
 import { RecurringExpense } from '../types';
@@ -103,6 +104,7 @@ const Settings: React.FC = () => {
             {/* Configuration Form */}
             <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col overflow-y-auto">
                 <h2 className="text-xl font-bold mb-6 flex items-center space-x-2">
+                    <span className="text-gray-500 font-mono text-lg">#</span>
                     <Activity className="text-primary" />
                     <span>System Configuration</span>
                 </h2>
@@ -110,7 +112,9 @@ const Settings: React.FC = () => {
                 <div className="space-y-6">
                     {/* Income Section */}
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Monthly Inflow</label>
+                        <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-2">
+                            <span className="text-gray-600 font-mono text-[10px]">#</span> Monthly Inflow
+                        </label>
                         <div className="bg-background border border-gray-600 rounded-xl p-4 flex items-center space-x-4">
                             <div className="p-3 bg-success/10 rounded-lg text-success">
                                 <DollarSign size={24} />
@@ -130,7 +134,9 @@ const Settings: React.FC = () => {
 
                     {/* Recurring Expenses Section */}
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider">Fixed Outflow (Autopay)</label>
+                        <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-2">
+                            <span className="text-gray-600 font-mono text-[10px]">#</span> Fixed Outflow (Autopay)
+                        </label>
                         <div className="bg-background border border-gray-600 rounded-xl p-4 mb-4">
                             <div className="flex gap-2 mb-2">
                                 <input 
@@ -201,7 +207,9 @@ const Settings: React.FC = () => {
                     <DollarSign size={200} />
                 </div>
                 
-                <h3 className="text-gray-400 font-bold mb-8 uppercase tracking-widest text-sm z-10">Calculated Baseline</h3>
+                <h3 className="text-gray-400 font-bold mb-8 uppercase tracking-widest text-sm z-10 flex items-center gap-2">
+                    <span className="text-gray-600 font-mono text-xs">#</span> Calculated Baseline
+                </h3>
 
                 <div className="space-y-6 z-10">
                     <div className="flex justify-between items-end border-b border-gray-700 pb-2">

@@ -124,7 +124,9 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm rounded-2xl">
               <div className="bg-surface border border-gray-700 p-6 rounded-2xl w-96 shadow-2xl">
                   <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-lg">Paste SMS Text</h3>
+                      <h3 className="font-bold text-lg flex items-center gap-2">
+                         <span className="text-gray-600 font-mono text-sm">#</span> Paste SMS Text
+                      </h3>
                       <button onClick={() => setShowPasteModal(false)}><X size={20} /></button>
                   </div>
                   <textarea 
@@ -147,6 +149,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
       <div className="lg:col-span-2 bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col">
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold flex items-center space-x-2">
+                <span className="text-gray-500 font-mono text-lg">#</span>
                 <ShieldCheck className="text-primary" />
                 <span>Transaction Log</span>
             </h2>
@@ -207,6 +210,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
       {/* Input & Firewall */}
       <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col">
         <h2 className="text-xl font-bold mb-6 flex items-center space-x-2">
+            <span className="text-gray-500 font-mono text-lg">#</span>
             <Bot className="text-accent" />
             <span>AI Spending Firewall</span>
         </h2>

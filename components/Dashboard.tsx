@@ -36,6 +36,11 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="flex items-center gap-2 mb-2">
+          <span className="text-gray-500 font-mono text-xl">#</span>
+          <h2 className="text-2xl font-bold">Mission Control</h2>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Health Meter */}
         <div className="bg-surface border border-gray-700 rounded-2xl p-6 relative overflow-hidden shadow-lg group">
@@ -43,6 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
             <Activity size={120} />
           </div>
           <h3 className="text-gray-400 text-xs font-bold mb-2 tracking-widest uppercase flex items-center gap-2">
+            <span className="text-gray-600 font-mono text-[10px]">#</span>
             <Activity size={14} className="text-primary" />
             SAVINGS HEALTH
           </h3>
@@ -66,6 +72,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
         {/* System Firewall Status */}
         <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col justify-between">
             <h3 className="text-gray-400 text-xs font-bold mb-4 tracking-widest uppercase flex items-center gap-2">
+                <span className="text-gray-600 font-mono text-[10px]">#</span>
                 <ShieldCheck size={14} className="text-accent" />
                 FIREWALL ENGINE
             </h3>
@@ -87,6 +94,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
         {/* Autopilot Actions */}
         <div className="bg-surface border border-gray-700 rounded-2xl p-6">
           <h3 className="text-gray-400 text-xs font-bold mb-4 tracking-widest uppercase flex items-center space-x-2">
+            <span className="text-gray-600 font-mono text-[10px]">#</span>
             <Zap size={14} className="text-warning" />
             <span>AUTOPILOT LOG</span>
           </h3>
@@ -105,6 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
         <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex items-center justify-between hover:border-primary/50 transition-colors">
             <div>
                 <h3 className="text-gray-400 text-xs font-bold mb-1 tracking-widest uppercase flex items-center gap-2">
+                    <span className="text-gray-600 font-mono text-[10px]">#</span>
                     <Users size={14} className="text-primary" />
                     SMARTSPLIT METRIC
                 </h3>
@@ -118,6 +127,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
         <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex items-center justify-between hover:border-accent/50 transition-colors">
             <div>
                  <h3 className="text-gray-400 text-xs font-bold mb-1 tracking-widest uppercase flex items-center gap-2">
+                    <span className="text-gray-600 font-mono text-[10px]">#</span>
                     <Clock size={14} className="text-accent" />
                     TIME-VALUE SCORE
                 </h3>
@@ -132,7 +142,9 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
       {/* Main Chart */}
       <div className="bg-surface border border-gray-700 rounded-2xl p-6 shadow-xl relative">
         <div className="flex justify-between items-center mb-8">
-            <h3 className="text-gray-400 text-xs font-bold tracking-widest uppercase">REAL-TIME SPENDING OSCILLOSCOPE</h3>
+            <h3 className="text-gray-400 text-xs font-bold tracking-widest uppercase flex items-center gap-2">
+                <span className="text-gray-600 font-mono text-[10px]">#</span> REAL-TIME SPENDING OSCILLOSCOPE
+            </h3>
             <div className="flex items-center gap-4 text-[10px] font-mono text-gray-500">
                 <div className="flex items-center gap-1"><span className="w-2 h-2 bg-primary rounded-full"></span> DEBITS</div>
                 <div className="flex items-center gap-1">INTERVAL: 7D</div>

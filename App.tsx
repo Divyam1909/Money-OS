@@ -16,7 +16,10 @@ import { Transaction, Budget, Goal, UserProfile } from './types';
 import { API_BASE_URL } from './constants';
 
 const App: React.FC = () => {
-  const [currentView, setCurrentView] = useState('dashboard');
+  // Helper to get view from hash
+  const getHashView = () => window.location.hash.replace('#', '') || 'dashboard';
+
+  const [currentView, setCurrentView] = useState(getHashView());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -29,6 +32,24 @@ const App: React.FC = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [goals, setGoals] = useState<Goal[]>([]);
 
+  // Sync state with URL hash
+  useEffect(() => {
+    const handleHashChange = () => {
+      const view = getHashView();
+      if (view !== currentView) {
+        setCurrentView(view);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [currentView]);
+
+  const handleNavigate = (view: string) => {
+    window.location.hash = view;
+    setCurrentView(view);
+    setMobileMenuOpen(false);
+  };
+
   // Session Check
   useEffect(() => {
     const savedToken = localStorage.getItem('moneyos_token');
@@ -40,14 +61,12 @@ const App: React.FC = () => {
   }, []);
 
   // 🔄 Automated Background Refresh
-  // Since the phone pushes data to the server, we just need to poll or refresh
-  // to show the latest state when the user is active.
   useEffect(() => {
     if (!isLoggedIn || !token) return;
 
     const interval = setInterval(() => {
         refreshDataQuietly(token);
-    }, 30000); // Check for new "pushed" data every 30 seconds
+    }, 30000);
 
     return () => clearInterval(interval);
   }, [isLoggedIn, token]);
@@ -102,6 +121,7 @@ const App: React.FC = () => {
     localStorage.clear();
     setToken(null);
     setIsLoggedIn(false);
+    window.location.hash = '';
     setCurrentView('dashboard');
   };
 
@@ -143,17 +163,49 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background text-gray-100 font-sans flex overflow-hidden">
-      <Sidebar currentView={currentView} setCurrentView={setCurrentView} onLogout={handleLogout} />
+      <Sidebar currentView={currentView} setCurrentView={handleNavigate} onLogout={handleLogout} />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Mobile Header */}
         <div className="md:hidden flex items-center justify-between p-4 bg-surface border-b border-gray-700">
-            <h1 className="text-xl font-bold text-primary">MoneyOS</h1>
+            <h1 className="text-xl font-bold text-primary flex items-center gap-2">
+               <span className="text-gray-500 font-mono">#</span> MoneyOS
+            </h1>
             <div className="flex items-center gap-3">
                 {isRefreshing && <RefreshCw size={16} className="animate-spin text-primary" />}
                 <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2"><Menu size={24} /></button>
             </div>
         </div>
+
+        {/* Mobile Navigation Menu */}
+        {mobileMenuOpen && (
+            <div className="md:hidden fixed inset-0 z-[200] bg-background p-6 flex flex-col animate-in slide-in-from-right duration-300">
+                <div className="flex justify-between items-center mb-8">
+                    <h2 className="text-2xl font-bold text-primary">Navigation</h2>
+                    <button onClick={() => setMobileMenuOpen(false)} className="p-2 text-gray-400">✕</button>
+                </div>
+                <nav className="flex-1 space-y-4">
+                    {['dashboard', 'transactions', 'budgets', 'groups', 'timevalue', 'goals', 'insights', 'settings'].map((view) => (
+                        <button
+                            key={view}
+                            onClick={() => handleNavigate(view)}
+                            className={`w-full text-left px-4 py-3 rounded-xl text-lg font-bold capitalize ${
+                                currentView === view ? 'bg-primary/20 text-primary border border-primary/20' : 'text-gray-400'
+                            }`}
+                        >
+                            <span className="text-gray-600 font-mono mr-2">#</span>{view === 'dashboard' ? 'Mission Control' : view.replace('groups', 'SmartSplit').replace('timevalue', 'Time-Value')}
+                        </button>
+                    ))}
+                </nav>
+                <button 
+                    onClick={handleLogout}
+                    className="mt-8 flex items-center justify-center space-x-3 px-4 py-4 text-danger font-bold w-full rounded-xl bg-danger/10 border border-danger/20 transition-all"
+                >
+                    <LogOut size={20} />
+                    <span>Log Out</span>
+                </button>
+            </div>
+        )}
 
         <main className="flex-1 overflow-auto p-4 md:p-8 relative">
             {/* Live Indicator */}

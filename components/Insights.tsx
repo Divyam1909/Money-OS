@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { generateMonthlyInsights } from '../services/geminiService';
 import { InsightReport, Transaction, Budget } from '../types';
@@ -28,7 +29,9 @@ const Insights: React.FC<InsightsProps> = ({ transactions, budgets }) => {
   return (
     <div className="space-y-6 h-full flex flex-col">
         <div className="bg-gradient-to-r from-accent/20 to-primary/20 border border-accent/30 rounded-2xl p-8 text-center shrink-0">
-            <h1 className="text-3xl font-bold mb-2">System Insights</h1>
+            <h1 className="text-3xl font-bold mb-2 flex items-center justify-center gap-2">
+                <span className="text-gray-500/50 font-mono text-xl">#</span> System Insights
+            </h1>
             <p className="text-gray-300">Deep behavioral analysis of your financial life.</p>
         </div>
 
@@ -65,6 +68,7 @@ const Insights: React.FC<InsightsProps> = ({ transactions, budgets }) => {
                 {/* Spending Habits */}
                 <div className="bg-surface border border-gray-700 rounded-2xl p-6 hover:border-primary/50 transition-colors">
                     <h3 className="text-primary font-bold mb-4 flex items-center gap-2 text-sm tracking-wider uppercase">
+                        <span className="text-gray-600 font-mono text-[10px]">#</span>
                         <TrendingUp size={18} /> Spending Habits
                     </h3>
                     <p className="leading-relaxed text-gray-300 text-sm">{report.spendingHabits}</p>
@@ -73,6 +77,7 @@ const Insights: React.FC<InsightsProps> = ({ transactions, budgets }) => {
                 {/* Budget Drift */}
                 <div className="bg-surface border border-gray-700 rounded-2xl p-6 hover:border-danger/50 transition-colors">
                     <h3 className="text-danger font-bold mb-4 flex items-center gap-2 text-sm tracking-wider uppercase">
+                        <span className="text-gray-600 font-mono text-[10px]">#</span>
                         <AlertOctagon size={18} /> Budget Drift
                     </h3>
                     <p className="leading-relaxed text-gray-300 text-sm">{report.budgetDrift}</p>
@@ -81,6 +86,7 @@ const Insights: React.FC<InsightsProps> = ({ transactions, budgets }) => {
                 {/* Behavioral Notes */}
                 <div className="bg-surface border border-gray-700 rounded-2xl p-6 hover:border-warning/50 transition-colors">
                      <h3 className="text-warning font-bold mb-4 flex items-center gap-2 text-sm tracking-wider uppercase">
+                        <span className="text-gray-600 font-mono text-[10px]">#</span>
                         <Lightbulb size={18} /> Behavioral Notes
                     </h3>
                     <p className="leading-relaxed text-gray-300 text-sm">{report.behavioralNotes}</p>
@@ -92,6 +98,7 @@ const Insights: React.FC<InsightsProps> = ({ transactions, budgets }) => {
                         <Radar size={80} />
                     </div>
                     <h3 className="text-accent font-bold mb-4 flex items-center gap-2 text-sm tracking-wider uppercase">
+                        <span className="text-gray-600 font-mono text-[10px]">#</span>
                         <Radar size={18} /> Identified Triggers
                     </h3>
                     

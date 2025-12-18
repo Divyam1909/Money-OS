@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { analyzeSmartSplit } from '../services/geminiService';
 import { SplitResponse } from '../types';
@@ -27,6 +28,7 @@ const SmartSplit: React.FC = () => {
       {/* Input Section */}
       <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col">
         <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
+            <span className="text-gray-500 font-mono text-lg">#</span>
             <Users className="text-primary" />
             <span>Group Finance Harmonizer</span>
         </h2>
@@ -60,6 +62,7 @@ const SmartSplit: React.FC = () => {
       {/* Result Section */}
       <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col overflow-hidden">
         <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
+            <span className="text-gray-500 font-mono text-lg">#</span>
             <FileText className="text-accent" />
             <span>Breakdown</span>
         </h2>
@@ -79,7 +82,9 @@ const SmartSplit: React.FC = () => {
 
                 {/* Expenses List */}
                 <div>
-                    <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Identified Expenses</h3>
+                    <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-2">
+                        <span className="text-gray-600 font-mono text-xs">#</span> Identified Expenses
+                    </h3>
                     <div className="space-y-2">
                         {result.expenses.map((exp, i) => (
                             <div key={i} className="bg-background p-3 rounded-lg text-sm border border-gray-700">
@@ -97,7 +102,9 @@ const SmartSplit: React.FC = () => {
 
                 {/* Settlements */}
                 <div>
-                    <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider">Settlement Plan</h3>
+                    <h3 className="text-sm font-bold text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-2">
+                        <span className="text-gray-600 font-mono text-xs">#</span> Settlement Plan
+                    </h3>
                     <div className="space-y-2">
                         {result.settlements.map((set, i) => (
                             <div key={i} className="flex items-center justify-between bg-success/10 border border-success/20 p-3 rounded-lg">

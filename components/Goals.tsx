@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Target, Calculator, AlertTriangle, CheckCircle } from 'lucide-react';
 import { analyzeGoal } from '../services/geminiService';
@@ -67,6 +68,7 @@ const Goals: React.FC<GoalsProps> = ({ goals, budgets, token, onUpdate }) => {
       {/* Existing Goals */}
       <div className="bg-surface border border-gray-700 rounded-2xl p-6 overflow-y-auto">
         <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
+            <span className="text-gray-500 font-mono text-lg">#</span>
             <Target className="text-primary" />
             <span>Your Savings Goals</span>
         </h2>
@@ -103,6 +105,7 @@ const Goals: React.FC<GoalsProps> = ({ goals, budgets, token, onUpdate }) => {
       {/* New Goal Wizard */}
       <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col">
         <h2 className="text-xl font-bold mb-6 flex items-center space-x-2">
+            <span className="text-gray-500 font-mono text-lg">#</span>
             <Calculator className="text-accent" />
             <span>Goal Planner</span>
         </h2>
@@ -129,7 +132,9 @@ const Goals: React.FC<GoalsProps> = ({ goals, budgets, token, onUpdate }) => {
             <div className="animate-in fade-in slide-in-from-bottom duration-300 flex-1 flex flex-col">
                 <div className="bg-background border border-gray-700 rounded-xl p-4 mb-4">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-gray-400 text-sm font-bold uppercase">Verdict</span>
+                        <span className="text-gray-400 text-sm font-bold uppercase flex items-center gap-2">
+                            <span className="text-gray-600 font-mono text-[10px]">#</span> Verdict
+                        </span>
                         <span className={`font-bold ${analysis.feasibility === 'Impossible' ? 'text-danger' : 'text-success'}`}>{analysis.feasibility}</span>
                     </div>
                     <div className="text-2xl font-bold mb-1">₹{analysis.monthlySavingsNeeded}<span className="text-sm font-normal text-gray-500">/mo</span></div>

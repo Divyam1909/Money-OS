@@ -61,6 +61,11 @@ const TimeValue: React.FC<TimeValueProps> = ({ userSettings }) => {
 
   return (
     <div className="space-y-6">
+        <div className="flex items-center gap-2 mb-2">
+            <span className="text-gray-500 font-mono text-xl">#</span>
+            <h2 className="text-2xl font-bold">Time-Value Analysis</h2>
+        </div>
+
         {/* Tab Switcher */}
         <div className="flex bg-surface p-1 rounded-xl w-full md:w-fit border border-gray-700">
             <button 
@@ -83,6 +88,7 @@ const TimeValue: React.FC<TimeValueProps> = ({ userSettings }) => {
                     {/* List */}
                     <div className="bg-surface border border-gray-700 rounded-2xl p-6 overflow-y-auto">
                         <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
+                            <span className="text-gray-600 font-mono text-lg">#</span>
                             <Clock className="text-warning" />
                             <span>Active Subscriptions</span>
                         </h2>
@@ -152,13 +158,15 @@ const TimeValue: React.FC<TimeValueProps> = ({ userSettings }) => {
                                 </div>
 
                                 <div className="bg-background/50 rounded-xl p-4 border border-gray-700 mb-4">
-                                    <h4 className="font-bold text-sm text-gray-400 mb-2 uppercase">Verdict</h4>
+                                    <h4 className="font-bold text-sm text-gray-400 mb-2 uppercase flex items-center gap-2">
+                                        <span className="text-gray-600 font-mono text-[10px]">#</span> Verdict
+                                    </h4>
                                     <p className="font-medium text-lg">{analysis.verdict}</p>
                                 </div>
 
                                 <div className="bg-primary/10 rounded-xl p-4 border border-primary/20 flex-1">
                                     <h4 className="font-bold text-sm text-primary mb-2 uppercase flex items-center gap-2">
-                                        <Star size={14} /> Advice
+                                        <span className="text-gray-600 font-mono text-[10px]">#</span> <Star size={14} /> Advice
                                     </h4>
                                     <p className="text-sm leading-relaxed">{analysis.actionableAdvice}</p>
                                 </div>
@@ -171,6 +179,7 @@ const TimeValue: React.FC<TimeValueProps> = ({ userSettings }) => {
                     {/* Item Input */}
                      <div className="bg-surface border border-gray-700 rounded-2xl p-6">
                         <h2 className="text-xl font-bold mb-6 flex items-center space-x-2">
+                            <span className="text-gray-500 font-mono text-lg">#</span>
                             <Package className="text-accent" />
                             <span>Cost-Per-Use Calculator</span>
                         </h2>
@@ -225,11 +234,15 @@ const TimeValue: React.FC<TimeValueProps> = ({ userSettings }) => {
                                 </div>
                                 <div className="space-y-4">
                                     <div className="bg-background p-4 rounded-xl border border-gray-700">
-                                        <div className="text-gray-400 text-xs font-bold uppercase mb-1">Verdict</div>
+                                        <div className="text-gray-400 text-xs font-bold uppercase mb-1 flex items-center gap-2">
+                                            <span className="text-gray-600 font-mono text-[10px]">#</span> Verdict
+                                        </div>
                                         <div className="text-lg">{itemResult.verdict}</div>
                                     </div>
                                     <div className="bg-accent/10 p-4 rounded-xl border border-accent/20">
-                                        <div className="text-accent text-xs font-bold uppercase mb-1">Suggestion</div>
+                                        <div className="text-accent text-xs font-bold uppercase mb-1 flex items-center gap-2">
+                                            <span className="text-gray-600 font-mono text-[10px]">#</span> Suggestion
+                                        </div>
                                         <div className="text-sm">{itemResult.actionableAdvice}</div>
                                     </div>
                                 </div>

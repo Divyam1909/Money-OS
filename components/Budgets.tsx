@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Budget, BudgetsResponse, Transaction } from '../types';
 import { runShiftBudget } from '../services/geminiService';
@@ -27,7 +28,7 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
   const handleShiftBudget = async () => {
     setIsAdjusting(true);
     try {
-        const result = await runShiftBudget(budgets, transactions.slice(0, 20)); // Analyze recent txns
+        const result = await runShiftBudget(budgets, transactions.slice(0, 20)); 
         setSuggestion(result);
     } catch (e) {
         console.error(e);
@@ -59,15 +60,28 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
   };
 
   const deleteBudget = async (id: string) => {
+      if (!id) {
+          console.error("No ID provided for budget deletion");
+          return;
+      }
+      
       if(!confirm("Are you sure you want to delete this budget category?")) return;
+      
       try {
-          await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
+          const res = await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
               method: 'DELETE',
               headers: { 'Authorization': `Bearer ${token}` }
           });
+          
+          if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.error || "Delete request failed");
+          }
+          
           onUpdate();
       } catch (e) {
-          alert("Delete failed");
+          console.error("Delete failed:", e);
+          alert("Delete failed. Please ensure the item has been synced to the server.");
       }
   };
 
@@ -106,7 +120,10 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-end gap-4">
         <div>
-            <h2 className="text-2xl font-bold">ShiftBudget Engine</h2>
+            <div className="flex items-center gap-2 mb-1">
+                <span className="text-gray-500 font-mono text-xl">#</span>
+                <h2 className="text-2xl font-bold">ShiftBudget Engine</h2>
+            </div>
             <p className="text-gray-400 text-sm">Adaptive budgeting based on your spending behavior.</p>
         </div>
         <div className="flex gap-2">
@@ -131,7 +148,9 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Current Budgets */}
         <div className="bg-surface border border-gray-700 rounded-2xl p-6">
-            <h3 className="font-bold mb-4 text-gray-300 uppercase tracking-wider text-sm">Allocations</h3>
+            <h3 className="font-bold mb-4 text-gray-300 uppercase tracking-wider text-sm flex items-center gap-2">
+                <span className="text-gray-600 font-mono text-xs">#</span> Allocations
+            </h3>
             
             {showAdd && (
                 <div className="mb-4 p-3 bg-background border border-gray-600 rounded-xl flex gap-2 items-center animate-in fade-in slide-in-from-top-2">
@@ -209,7 +228,9 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
                 </div>
             ) : (
                 <div className="animate-in fade-in slide-in-from-right duration-300 w-full">
-                    <h3 className="font-bold mb-2 text-accent">PROPOSED CHANGES</h3>
+                    <h3 className="font-bold mb-2 text-accent flex items-center gap-2">
+                        <span className="text-gray-600 font-mono text-xs">#</span> PROPOSED CHANGES
+                    </h3>
                     <p className="text-sm text-gray-400 mb-4 italic">"{suggestion.summary}"</p>
                     
                     <div className="space-y-3 mb-6">
