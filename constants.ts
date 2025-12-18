@@ -4,8 +4,8 @@ import { Budget, Subscription, Transaction, Goal } from "./types";
 // ------------------------------------------------------------------
 // 🔧 DEPLOYMENT CONFIGURATION
 // ------------------------------------------------------------------
+// Only one URL is needed now!
 export const API_BASE_URL = "https://sms-backend-production-cad9.up.railway.app";
-export const SMS_PARSER_URL = "https://sms-parser-production-7f55.up.railway.app";
 // ------------------------------------------------------------------
 
 export const INITIAL_BUDGETS: Budget[] = [];

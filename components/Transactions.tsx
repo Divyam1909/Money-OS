@@ -1,18 +1,21 @@
+
 import React, { useState } from 'react';
 import { Transaction, Budget, Persona, FirewallDecision } from '../types';
 import { checkTransactionWithFirewall } from '../services/geminiService';
 import { parseSMS } from '../services/smsParser';
-import { ShieldCheck, ShieldAlert, ShieldBan, Bot, Send, CloudDownload, RefreshCw, ClipboardPlus, X, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { API_BASE_URL, SMS_PARSER_URL } from '../constants';
+import { ShieldCheck, ShieldAlert, ShieldBan, Bot, CloudDownload, RefreshCw, ClipboardPlus, X, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { API_BASE_URL } from '../constants';
 
 interface TransactionsProps {
     transactions: Transaction[];
     budgets: Budget[];
     token: string;
     onUpdate: () => void;
+    isSyncing: boolean;
+    onManualSync: () => void;
 }
 
-const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, token, onUpdate }) => {
+const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, token, onUpdate, isSyncing, onManualSync }) => {
   const [persona, setPersona] = useState<Persona>('BALANCED');
   
   // Form State
@@ -25,56 +28,9 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [firewallResult, setFirewallResult] = useState<{decision: FirewallDecision, reason: string, futureImpact: string} | null>(null);
 
-  // Sync State
-  const [isSyncing, setIsSyncing] = useState(false);
-  
   // Paste Modal State
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pastedSMS, setPastedSMS] = useState('');
-
-  const handleSyncSMS = async () => {
-    setIsSyncing(true);
-    try {
-        // Fetching from the dedicated SMS Parser URL
-        const response = await fetch(`${SMS_PARSER_URL}/api/sync-sms`);
-        const data = await response.json();
-
-        if (data.success && data.messages.length > 0) {
-            const newTransactions: Transaction[] = [];
-            let count = 0;
-
-            data.messages.forEach((msg: any) => {
-                const parsed = parseSMS(msg);
-                if (parsed) {
-                    newTransactions.push(parsed);
-                    count++;
-                }
-            });
-
-            if (count > 0) {
-                // Save synced transactions to main backend
-                const syncRes = await fetch(`${API_BASE_URL}/api/transactions/sync`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ transactions: newTransactions })
-                });
-                const syncData = await syncRes.json();
-                
-                onUpdate();
-                alert(`Synced ${syncData.added || count} new transactions from cloud.`);
-            } else {
-                alert(`Fetched ${data.count} messages, but no financial transactions found.`);
-            }
-        } else {
-            alert("No new messages found on cloud.");
-        }
-    } catch (error) {
-        console.error("Sync failed:", error);
-        alert("Sync failed. Check connection to parser backend.");
-    } finally {
-        setIsSyncing(false);
-    }
-  };
 
   const handleManualParse = async () => {
       if (!pastedSMS) return;
@@ -95,7 +51,6 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
           setType(parsed.type);
           setShowPasteModal(false);
           setPastedSMS('');
-          alert(`SMS Parsed! Type: ${parsed.type}, Amount: ${parsed.amount}`);
       } else {
           alert("Could not extract transaction details.");
       }
@@ -204,12 +159,12 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
                     <span className="hidden sm:inline">Paste SMS</span>
                 </button>
                 <button 
-                    onClick={handleSyncSMS}
+                    onClick={onManualSync}
                     disabled={isSyncing}
-                    className="bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50"
+                    className="bg-primary/20 text-primary hover:bg-primary/30 text-xs font-bold py-2 px-3 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50 border border-primary/20"
                 >
                     <CloudDownload size={14} className={isSyncing ? 'animate-bounce' : ''} />
-                    <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Cloud Sync'}</span>
+                    <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Force Sync'}</span>
                 </button>
             </div>
         </div>
@@ -218,7 +173,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
             {transactions.length === 0 && (
                 <div className="text-center text-gray-500 py-10">
                     <RefreshCw size={40} className="mx-auto mb-2 opacity-20" />
-                    <p>No transactions found. Sync from SMS or add manually.</p>
+                    <p>Waiting for new transactions...</p>
+                    <p className="text-xs">MoneyOS syncs with your phone automatically.</p>
                 </div>
             )}
             {transactions.map((tx) => (

@@ -1,14 +1,11 @@
-
 {
   "name": "moneyos-backend",
   "version": "1.0.0",
-  "description": "Backend services for MoneyOS AI Finance System",
+  "description": "Core API for MoneyOS Financial System",
   "main": "main-server.js",
   "scripts": {
-    "start-main": "node main-server.js",
-    "start-parser": "node sms-parser-server.js",
-    "dev-main": "nodemon main-server.js",
-    "dev-parser": "nodemon sms-parser-server.js"
+    "start": "node main-server.js",
+    "dev": "nodemon main-server.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
