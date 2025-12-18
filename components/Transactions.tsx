@@ -4,7 +4,7 @@ import { Transaction, Budget, Persona, FirewallDecision } from '../types';
 import { checkTransactionWithFirewall } from '../services/geminiService';
 import { parseSMS } from '../services/smsParser';
 import { ShieldCheck, ShieldAlert, ShieldBan, Bot, Send, CloudDownload, RefreshCw, ClipboardPlus, X, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
-import { API_BASE_URL } from '../constants';
+import { API_BASE_URL, SMS_PARSER_URL } from '../constants';
 
 interface TransactionsProps {
     transactions: Transaction[];
@@ -36,7 +36,8 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
   const handleSyncSMS = async () => {
     setIsSyncing(true);
     try {
-        const response = await fetch(`${API_BASE_URL}/api/sync-sms`);
+        // Fetching from the dedicated SMS Parser URL
+        const response = await fetch(`${SMS_PARSER_URL}/api/sync-sms`);
         const data = await response.json();
 
         if (data.success && data.messages.length > 0) {
@@ -52,7 +53,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
             });
 
             if (count > 0) {
-                // Save synced transactions to backend
+                // Save synced transactions to main backend
                 const syncRes = await fetch(`${API_BASE_URL}/api/transactions/sync`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': token },
@@ -70,7 +71,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
         }
     } catch (error) {
         console.error("Sync failed:", error);
-        alert("Sync failed. Check connection to backend.");
+        alert("Sync failed. Check connection to parser backend.");
     } finally {
         setIsSyncing(false);
     }
@@ -79,7 +80,6 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
   const handleManualParse = async () => {
       if (!pastedSMS) return;
       
-      // Create a mock SMS object
       const mockMsg = {
           body: pastedSMS,
           receivedAt: new Date().toISOString(),
@@ -90,7 +90,6 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
       const parsed = parseSMS(mockMsg);
 
       if (parsed) {
-          // Auto-fill the form with parsed data
           setAmount(parsed.amount.toString());
           setDescription(parsed.description);
           setCategory(parsed.category);
@@ -107,7 +106,6 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
     e.preventDefault();
     if (!amount || !description) return;
     
-    // Skip firewall for credits
     if (type === 'CREDIT') {
         confirmTransaction();
         return;
@@ -116,7 +114,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
     setIsAnalyzing(true);
     try {
         const result = await checkTransactionWithFirewall(
-            { amount: Number(amount), category, description, type: 'DEBIT' }, // Explicitly pass type context if needed
+            { amount: Number(amount), category, description, type: 'DEBIT' },
             budgets,
             persona
         );
@@ -139,7 +137,6 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
         firewallReason: firewallResult?.reason || (type === 'CREDIT' ? 'Income' : 'Manual Entry')
     };
     
-    // Save to Backend
     try {
          await fetch(`${API_BASE_URL}/api/transactions`, {
             method: 'POST',
@@ -259,7 +256,6 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
             <span>AI Spending Firewall</span>
         </h2>
 
-        {/* Persona Selector */}
         <div className="flex bg-background rounded-lg p-1 mb-6">
             {(['STRICT', 'BALANCED', 'CHILL'] as Persona[]).map((p) => (
                 <button
@@ -274,7 +270,6 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
             ))}
         </div>
 
-        {/* Firewall Modal Result - Overlay within this column */}
         {firewallResult ? (
             <div className="flex-1 flex flex-col justify-center animate-in fade-in zoom-in duration-300">
                 <div className={`p-6 rounded-2xl border-2 mb-4 text-center ${
@@ -307,7 +302,6 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
                 </div>
             </div>
         ) : (
-            /* Input Form */
             <form onSubmit={handleAnalyze} className="space-y-4 flex-1">
                 <div className="flex gap-2 mb-2 bg-background p-1 rounded-lg">
                     <button 

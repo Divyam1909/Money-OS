@@ -1,12 +1,9 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { Budget, FirewallResponse, Persona, Transaction, BudgetsResponse, SplitResponse, TimeValueAnalysis, GoalAnalysisResponse, InsightReport } from "../types";
 
 const getAI = () => {
-    const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-        throw new Error("API Key not found in environment variables");
-    }
-    return new GoogleGenAI({ apiKey });
+    return new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
 };
 
 export const checkTransactionWithFirewall = async (
@@ -16,7 +13,6 @@ export const checkTransactionWithFirewall = async (
 ): Promise<FirewallResponse> => {
     const ai = getAI();
     
-    // Construct context
     const budgetContext = currentBudgets.map(b => `${b.category}: Spent ${b.spent}/${b.limit}`).join(', ');
     
     const prompt = `
@@ -36,7 +32,7 @@ export const checkTransactionWithFirewall = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -52,8 +48,9 @@ export const checkTransactionWithFirewall = async (
         }
     });
 
-    if (!response.text) throw new Error("No response from AI");
-    return JSON.parse(response.text) as FirewallResponse;
+    const text = response.text;
+    if (!text) throw new Error("No response from AI");
+    return JSON.parse(text) as FirewallResponse;
 };
 
 export const runShiftBudget = async (
@@ -78,7 +75,7 @@ export const runShiftBudget = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -104,8 +101,9 @@ export const runShiftBudget = async (
         }
     });
 
-    if (!response.text) throw new Error("No response from AI");
-    return JSON.parse(response.text) as BudgetsResponse;
+    const text = response.text;
+    if (!text) throw new Error("No response from AI");
+    return JSON.parse(text) as BudgetsResponse;
 };
 
 export const analyzeSmartSplit = async (inputText: string): Promise<SplitResponse> => {
@@ -122,11 +120,8 @@ export const analyzeSmartSplit = async (inputText: string): Promise<SplitRespons
         3. Provide a fairness analysis comment.
     `;
 
-    // Note: Schema for dynamic lists like "settlements" can be tricky if names aren't known, but we'll try a flexible schema.
-    // For simplicity in this demo, we will ask for a structured object.
-    
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -166,8 +161,9 @@ export const analyzeSmartSplit = async (inputText: string): Promise<SplitRespons
         }
     });
 
-    if (!response.text) throw new Error("No response from AI");
-    return JSON.parse(response.text) as SplitResponse;
+    const text = response.text;
+    if (!text) throw new Error("No response from AI");
+    return JSON.parse(text) as SplitResponse;
 };
 
 export const analyzeTimeValue = async (
@@ -190,7 +186,7 @@ export const analyzeTimeValue = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -206,8 +202,9 @@ export const analyzeTimeValue = async (
         }
     });
 
-    if (!response.text) throw new Error("No response from AI");
-    return JSON.parse(response.text) as TimeValueAnalysis;
+    const text = response.text;
+    if (!text) throw new Error("No response from AI");
+    return JSON.parse(text) as TimeValueAnalysis;
 };
 
 export const analyzeGoal = async (
@@ -236,7 +233,7 @@ export const analyzeGoal = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -252,8 +249,9 @@ export const analyzeGoal = async (
         }
     });
 
-    if (!response.text) throw new Error("No response from AI");
-    return JSON.parse(response.text) as GoalAnalysisResponse;
+    const text = response.text;
+    if (!text) throw new Error("No response from AI");
+    return JSON.parse(text) as GoalAnalysisResponse;
 };
 
 export const generateMonthlyInsights = async (
@@ -275,7 +273,7 @@ export const generateMonthlyInsights = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -292,6 +290,7 @@ export const generateMonthlyInsights = async (
         }
     });
 
-    if (!response.text) throw new Error("No response from AI");
-    return JSON.parse(response.text) as InsightReport;
+    const text = response.text;
+    if (!text) throw new Error("No response from AI");
+    return JSON.parse(text) as InsightReport;
 };

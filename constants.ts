@@ -4,8 +4,8 @@ import { Budget, Subscription, Transaction, Goal } from "./types";
 // ------------------------------------------------------------------
 // 🔧 DEPLOYMENT CONFIGURATION
 // ------------------------------------------------------------------
-// Replace this URL with your own Render Backend URL after deployment.
-export const API_BASE_URL = "https://sms-parser-qkzu.onrender.com";
+export const API_BASE_URL = "https://sms-backend-production-cad9.up.railway.app";
+export const SMS_PARSER_URL = "https://sms-parser-production-7f55.up.railway.app";
 // ------------------------------------------------------------------
 
 export const INITIAL_BUDGETS: Budget[] = [];
@@ -17,5 +17,6 @@ export const INITIAL_SUBSCRIPTIONS: Subscription[] = [];
 export const INITIAL_GOALS: Goal[] = [];
 
 export const MOCK_AUTOPILOT_LOGS = [
-  { id: 1, action: "System Initialized", reason: "Welcome to MoneyOS." }
+  { id: 1, action: "System Initialized", reason: "MoneyOS kernel is now active." },
+  { id: 2, action: "Firewall Active", reason: "Spending protection enabled." }
 ];

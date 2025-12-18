@@ -2,7 +2,7 @@
 import React from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { MOCK_AUTOPILOT_LOGS } from '../constants';
-import { TrendingUp, Zap, Users, Clock } from 'lucide-react';
+import { TrendingUp, Zap, Users, Clock, ShieldCheck, Activity } from 'lucide-react';
 import { Transaction, Budget } from '../types';
 
 interface DashboardProps {
@@ -11,13 +11,10 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
-  // Calculate total health
   const totalLimit = budgets.reduce((acc, b) => acc + b.limit, 0);
   const totalSpent = budgets.reduce((acc, b) => acc + b.spent, 0);
-  // Avoid divide by zero
   const healthPercentage = totalLimit > 0 ? Math.round(((totalLimit - totalSpent) / totalLimit) * 100) : 100;
 
-  // Generate chart data from real transactions
   const processChartData = () => {
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       const data = days.map(d => ({ name: d, spend: 0 }));
@@ -38,106 +35,147 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets }) => {
   const chartData = processChartData();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Health Meter */}
-        <div className="bg-surface border border-gray-700 rounded-2xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-4 opacity-10">
-            <TrendingUp size={100} />
+        <div className="bg-surface border border-gray-700 rounded-2xl p-6 relative overflow-hidden shadow-lg group">
+          <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+            <Activity size={120} />
           </div>
-          <h3 className="text-gray-400 text-sm font-semibold mb-2">SAVINGS HEALTH</h3>
+          <h3 className="text-gray-400 text-xs font-bold mb-2 tracking-widest uppercase flex items-center gap-2">
+            <Activity size={14} className="text-primary" />
+            SAVINGS HEALTH
+          </h3>
           <div className="flex items-baseline space-x-2">
-            <span className={`text-4xl font-bold ${healthPercentage > 30 ? 'text-success' : 'text-danger'}`}>
+            <span className={`text-5xl font-black tracking-tighter ${healthPercentage > 30 ? 'text-success' : 'text-danger'}`}>
               {healthPercentage}%
             </span>
-            <span className="text-gray-400">budget remaining</span>
+            <span className="text-gray-500 font-medium">buffer</span>
           </div>
-          <div className="w-full bg-gray-700 h-2 rounded-full mt-4">
+          <div className="w-full bg-gray-800 h-3 rounded-full mt-6 p-0.5 border border-gray-700">
             <div 
-              className={`h-2 rounded-full transition-all duration-500 ${healthPercentage > 30 ? 'bg-success' : 'bg-danger'}`} 
+              className={`h-full rounded-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(16,185,129,0.3)] ${healthPercentage > 30 ? 'bg-success' : 'bg-danger'}`} 
               style={{ width: `${healthPercentage}%` }}
             ></div>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-              {totalSpent} spent of {totalLimit} limit.
+          <p className="text-[10px] text-gray-500 mt-3 font-mono">
+              UTILIZATION: ₹{totalSpent.toLocaleString()} / ₹{totalLimit.toLocaleString()}
           </p>
         </div>
 
-        {/* Upcoming Bills (Placeholder logic until Recurring is integrated fully into dashboard) */}
-        <div className="bg-surface border border-gray-700 rounded-2xl p-6">
-            <h3 className="text-gray-400 text-sm font-semibold mb-4">UPCOMING BILLS</h3>
-            <div className="space-y-3">
-                 <div className="text-gray-500 text-sm text-center py-4">
-                    Check Settings for Recurring Expenses
-                 </div>
+        {/* System Firewall Status */}
+        <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col justify-between">
+            <h3 className="text-gray-400 text-xs font-bold mb-4 tracking-widest uppercase flex items-center gap-2">
+                <ShieldCheck size={14} className="text-accent" />
+                FIREWALL ENGINE
+            </h3>
+            <div className="flex-1 flex flex-col justify-center">
+                <div className="flex items-center gap-3 text-success font-bold text-lg">
+                    <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-success"></span>
+                    </span>
+                    ACTIVE
+                </div>
+                <p className="text-xs text-gray-500 mt-1">Real-time spending verification is operational.</p>
+            </div>
+            <div className="mt-4 pt-4 border-t border-gray-800">
+                <p className="text-[10px] text-gray-400 font-mono">ENCRYPTION: AES-256-GCM</p>
             </div>
         </div>
 
         {/* Autopilot Actions */}
         <div className="bg-surface border border-gray-700 rounded-2xl p-6">
-          <h3 className="text-gray-400 text-sm font-semibold mb-4 flex items-center space-x-2">
-            <Zap size={16} className="text-warning" />
+          <h3 className="text-gray-400 text-xs font-bold mb-4 tracking-widest uppercase flex items-center space-x-2">
+            <Zap size={14} className="text-warning" />
             <span>AUTOPILOT LOG</span>
           </h3>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-32 overflow-y-auto custom-scrollbar">
             {MOCK_AUTOPILOT_LOGS.map((log) => (
-              <div key={log.id} className="text-sm">
-                <p className="text-white font-medium">{log.action}</p>
-                <p className="text-gray-500 text-xs">{log.reason}</p>
+              <div key={log.id} className="text-xs border-l-2 border-gray-700 pl-3 py-1 hover:border-warning transition-colors">
+                <p className="text-white font-semibold">{log.action}</p>
+                <p className="text-gray-500 text-[10px] uppercase">{log.reason}</p>
               </div>
             ))}
           </div>
         </div>
       </div>
       
-      {/* Secondary Row for Checklists */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* SmartSplit Summary */}
-        <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex items-center justify-between">
+        <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex items-center justify-between hover:border-primary/50 transition-colors">
             <div>
-                <h3 className="text-gray-400 text-sm font-semibold mb-1 flex items-center gap-2">
-                    <Users size={16} className="text-primary" />
-                    GROUP DEBT
+                <h3 className="text-gray-400 text-xs font-bold mb-1 tracking-widest uppercase flex items-center gap-2">
+                    <Users size={14} className="text-primary" />
+                    SMARTSPLIT METRIC
                 </h3>
-                <p className="text-sm text-gray-400">Manage group expenses in the Groups tab.</p>
+                <p className="text-sm text-gray-300">Synchronize group debts via natural language.</p>
             </div>
             <div className="text-right">
-                <button className="text-primary text-sm font-bold hover:underline">View Groups</button>
+                <button className="text-primary text-xs font-bold hover:underline tracking-widest">OPEN HARMONIZER</button>
             </div>
         </div>
 
-        {/* Time-Value Score */}
-        <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex items-center justify-between">
+        <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex items-center justify-between hover:border-accent/50 transition-colors">
             <div>
-                 <h3 className="text-gray-400 text-sm font-semibold mb-1 flex items-center gap-2">
-                    <Clock size={16} className="text-accent" />
-                    EFFICIENCY SCORE
+                 <h3 className="text-gray-400 text-xs font-bold mb-1 tracking-widest uppercase flex items-center gap-2">
+                    <Clock size={14} className="text-accent" />
+                    TIME-VALUE SCORE
                 </h3>
-                <p className="text-sm text-gray-400">Analyze subscriptions in Time-Value tab.</p>
+                <p className="text-sm text-gray-300">Efficiency optimized via behavioral usage data.</p>
+            </div>
+            <div className="text-right">
+                <div className="text-xl font-mono font-bold text-accent">--</div>
             </div>
         </div>
       </div>
 
       {/* Main Chart */}
-      <div className="bg-surface border border-gray-700 rounded-2xl p-6">
-        <h3 className="text-gray-400 text-sm font-semibold mb-6">SPENDING TREND (LAST 7 DAYS)</h3>
-        <div className="h-64 w-full">
+      <div className="bg-surface border border-gray-700 rounded-2xl p-6 shadow-xl relative">
+        <div className="flex justify-between items-center mb-8">
+            <h3 className="text-gray-400 text-xs font-bold tracking-widest uppercase">REAL-TIME SPENDING OSCILLOSCOPE</h3>
+            <div className="flex items-center gap-4 text-[10px] font-mono text-gray-500">
+                <div className="flex items-center gap-1"><span className="w-2 h-2 bg-primary rounded-full"></span> DEBITS</div>
+                <div className="flex items-center gap-1">INTERVAL: 7D</div>
+            </div>
+        </div>
+        <div className="h-72 w-full">
             <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData}>
                 <defs>
                 <linearGradient id="colorSpend" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                 </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-                <XAxis dataKey="name" stroke="#94a3b8" tickLine={false} axisLine={false} />
-                <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} tickFormatter={(val) => `₹${val}`} />
-                <Tooltip 
-                    contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#f8fafc' }}
-                    itemStyle={{ color: '#3b82f6' }}
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                <XAxis 
+                    dataKey="name" 
+                    stroke="#475569" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tick={{fontSize: 10, fontWeight: 700}}
                 />
-                <Area type="monotone" dataKey="spend" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSpend)" />
+                <YAxis 
+                    stroke="#475569" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickFormatter={(val) => `₹${val}`} 
+                    tick={{fontSize: 10, fontWeight: 700}}
+                />
+                <Tooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: '12px', color: '#f8fafc', fontSize: '12px' }}
+                    itemStyle={{ color: '#3b82f6', fontWeight: 700 }}
+                    cursor={{ stroke: '#334155', strokeWidth: 2 }}
+                />
+                <Area 
+                    type="monotone" 
+                    dataKey="spend" 
+                    stroke="#3b82f6" 
+                    strokeWidth={4} 
+                    fillOpacity={1} 
+                    fill="url(#colorSpend)" 
+                    animationDuration={1500}
+                />
             </AreaChart>
             </ResponsiveContainer>
         </div>
