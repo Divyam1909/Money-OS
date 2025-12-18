@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Transaction, Budget, Persona, FirewallDecision } from '../types';
 import { checkTransactionWithFirewall } from '../services/geminiService';
@@ -56,7 +55,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
                 // Save synced transactions to main backend
                 const syncRes = await fetch(`${API_BASE_URL}/api/transactions/sync`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ transactions: newTransactions })
                 });
                 const syncData = await syncRes.json();
@@ -140,7 +139,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
     try {
          await fetch(`${API_BASE_URL}/api/transactions`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': token },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ 
                 transaction: { ...newTx, date: new Date().toISOString().split('T')[0], id: Date.now().toString() }
             })

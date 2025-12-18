@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ArrowRight, DollarSign, Wallet, Calendar, CheckCircle } from 'lucide-react';
 import { RecurringExpense, Budget } from '../types';
@@ -58,7 +57,7 @@ const Onboarding: React.FC<OnboardingProps> = ({ token, onComplete }) => {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': token 
+                    'Authorization': `Bearer ${token}` 
                 },
                 body: JSON.stringify({
                     monthlyIncome: monthlyIncomeVal,

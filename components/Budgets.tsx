@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Budget, BudgetsResponse, Transaction } from '../types';
 import { runShiftBudget } from '../services/geminiService';
@@ -49,7 +48,7 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
     try {
         await fetch(`${API_BASE_URL}/api/budgets`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': token },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ budgets: newBudgets })
         });
         onUpdate();
@@ -64,7 +63,7 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
       try {
           await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
               method: 'DELETE',
-              headers: { 'Authorization': token }
+              headers: { 'Authorization': `Bearer ${token}` }
           });
           onUpdate();
       } catch (e) {
@@ -76,7 +75,7 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
       try {
           await fetch(`${API_BASE_URL}/api/budgets`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': token },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ budgets: [{ ...b, limit: Number(editLimit) }] })
           });
           setEditingId(null);
@@ -91,7 +90,7 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
       try {
            await fetch(`${API_BASE_URL}/api/budgets`, {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Authorization': token },
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ budgets: [{ category: newCat, limit: Number(newLimit), spent: 0 }] })
           });
           setNewCat('');

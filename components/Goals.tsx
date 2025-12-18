@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Target, Calculator, AlertTriangle, CheckCircle } from 'lucide-react';
 import { analyzeGoal } from '../services/geminiService';
@@ -50,7 +49,7 @@ const Goals: React.FC<GoalsProps> = ({ goals, budgets, token, onUpdate }) => {
     try {
         await fetch(`${API_BASE_URL}/api/goals`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': token },
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ goal: newGoal })
         });
         onUpdate();

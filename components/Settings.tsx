@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Save, Plus, Trash2, CreditCard, DollarSign, Activity } from 'lucide-react';
 import { RecurringExpense } from '../types';
@@ -27,7 +26,7 @@ const Settings: React.FC = () => {
 
         try {
             const res = await fetch(`${API_BASE_URL}/api/user/settings`, {
-                headers: { 'Authorization': token }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await res.json();
             if (data.success && data.settings) {
@@ -49,7 +48,7 @@ const Settings: React.FC = () => {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
-                    'Authorization': token 
+                    'Authorization': `Bearer ${token}` 
                 },
                 body: JSON.stringify({
                     monthlyIncome: Number(income),

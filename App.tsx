@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -42,7 +41,7 @@ const App: React.FC = () => {
       setLoadingData(true);
       try {
           const res = await fetch(`${API_BASE_URL}/api/data`, {
-              headers: { 'Authorization': authToken }
+              headers: { 'Authorization': `Bearer ${authToken}` }
           });
           const data = await res.json();
           if (data.success) {
