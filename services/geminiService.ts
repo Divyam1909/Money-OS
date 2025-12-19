@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { Budget, FirewallResponse, Persona, Transaction, BudgetsResponse, SplitResponse, TimeValueAnalysis, GoalAnalysisResponse, InsightReport } from "../types";
 
@@ -32,7 +31,7 @@ export const checkTransactionWithFirewall = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -48,6 +47,7 @@ export const checkTransactionWithFirewall = async (
         }
     });
 
+    // 🛠️ FIX: Removed ()
     const text = response.text;
     if (!text) throw new Error("No response from AI");
     return JSON.parse(text) as FirewallResponse;
@@ -75,7 +75,7 @@ export const runShiftBudget = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -101,6 +101,7 @@ export const runShiftBudget = async (
         }
     });
 
+    // 🛠️ FIX: Removed ()
     const text = response.text;
     if (!text) throw new Error("No response from AI");
     return JSON.parse(text) as BudgetsResponse;
@@ -121,7 +122,7 @@ export const analyzeSmartSplit = async (inputText: string): Promise<SplitRespons
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -161,6 +162,7 @@ export const analyzeSmartSplit = async (inputText: string): Promise<SplitRespons
         }
     });
 
+    // 🛠️ FIX: Removed ()
     const text = response.text;
     if (!text) throw new Error("No response from AI");
     return JSON.parse(text) as SplitResponse;
@@ -186,7 +188,7 @@ export const analyzeTimeValue = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -202,6 +204,7 @@ export const analyzeTimeValue = async (
         }
     });
 
+    // 🛠️ FIX: Removed ()
     const text = response.text;
     if (!text) throw new Error("No response from AI");
     return JSON.parse(text) as TimeValueAnalysis;
@@ -233,7 +236,7 @@ export const analyzeGoal = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -249,6 +252,7 @@ export const analyzeGoal = async (
         }
     });
 
+    // 🛠️ FIX: Removed ()
     const text = response.text;
     if (!text) throw new Error("No response from AI");
     return JSON.parse(text) as GoalAnalysisResponse;
@@ -273,7 +277,7 @@ export const generateMonthlyInsights = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
+        model: 'gemini-2.0-flash',
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -290,7 +294,52 @@ export const generateMonthlyInsights = async (
         }
     });
 
+    // 🛠️ FIX: Removed ()
     const text = response.text;
     if (!text) throw new Error("No response from AI");
     return JSON.parse(text) as InsightReport;
+};
+
+export const parseVoiceCommand = async (transcript: string): Promise<Partial<Transaction> | null> => {
+  try {
+    const ai = getAI();
+    
+    const prompt = `
+      Extract transaction details from this spoken command: "${transcript}".
+      Return ONLY a JSON object with: 
+      - amount (number)
+      - category (string, pick from: Food & Dining, Transportation, Shopping, Grocery, Utilities, Health, Entertainment, Travel, Uncategorized)
+      - description (string, short summary)
+      - type (DEBIT or CREDIT)
+      
+      Example output: {"amount": 50, "category": "Food & Dining", "description": "Tea and snacks", "type": "DEBIT"}
+    `;
+
+    const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: prompt,
+        config: {
+            responseMimeType: 'application/json',
+            responseSchema: {
+                type: Type.OBJECT,
+                properties: {
+                    amount: { type: Type.NUMBER },
+                    category: { type: Type.STRING },
+                    description: { type: Type.STRING },
+                    type: { type: Type.STRING, enum: ['DEBIT', 'CREDIT'] }
+                },
+                required: ['amount', 'category', 'description', 'type']
+            }
+        }
+    });
+
+    // 🛠️ FIX: Removed ()
+    const text = response.text;
+    if (!text) return null;
+    
+    return JSON.parse(text) as Partial<Transaction>;
+  } catch (error) {
+    console.error("Voice Parse Error:", error);
+    return null;
+  }
 };

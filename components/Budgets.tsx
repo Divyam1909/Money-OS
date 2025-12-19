@@ -1,8 +1,7 @@
-
 import React, { useState } from 'react';
 import { Budget, BudgetsResponse, Transaction } from '../types';
 import { runShiftBudget } from '../services/geminiService';
-import { ArrowRight, RefreshCw, CheckCircle, Plus, Trash2, Edit2, X, Save } from 'lucide-react';
+import { ArrowRight, RefreshCw, CheckCircle, Plus, Trash2, Edit2, X, Save, Loader } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
 
 interface BudgetsProps {
@@ -24,6 +23,7 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
   const [showAdd, setShowAdd] = useState(false);
   const [newCat, setNewCat] = useState('');
   const [newLimit, setNewLimit] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleShiftBudget = async () => {
     setIsAdjusting(true);
@@ -40,6 +40,7 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
 
   const applyChanges = async () => {
     if (!suggestion) return;
+    setActionLoading('apply');
     
     const newBudgets = budgets.map(b => {
         const adj = suggestion.adjustments.find(a => a.category === b.category);
@@ -52,40 +53,41 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ budgets: newBudgets })
         });
-        onUpdate();
+        await onUpdate();
         setSuggestion(null);
     } catch (e) {
         alert("Failed to update budgets");
+    } finally {
+        setActionLoading(null);
     }
   };
 
   const deleteBudget = async (id: string) => {
-      if (!id) {
-          console.error("No ID provided for budget deletion");
-          return;
-      }
-      
+      if (!id) return;
       if(!confirm("Are you sure you want to delete this budget category?")) return;
       
+      setActionLoading(id);
       try {
           const res = await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
               method: 'DELETE',
               headers: { 'Authorization': `Bearer ${token}` }
           });
           
-          if (!res.ok) {
-              const data = await res.json();
-              throw new Error(data.error || "Delete request failed");
+          if (res.ok) {
+              await onUpdate();
+          } else {
+              alert("Delete failed. Server error.");
           }
-          
-          onUpdate();
       } catch (e) {
           console.error("Delete failed:", e);
-          alert("Delete failed. Please ensure the item has been synced to the server.");
+          alert("Network error.");
+      } finally {
+          setActionLoading(null);
       }
   };
 
   const saveEdit = async (b: Budget) => {
+      setActionLoading(b._id || 'edit');
       try {
           await fetch(`${API_BASE_URL}/api/budgets`, {
               method: 'POST',
@@ -93,14 +95,17 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
               body: JSON.stringify({ budgets: [{ ...b, limit: Number(editLimit) }] })
           });
           setEditingId(null);
-          onUpdate();
+          await onUpdate();
       } catch (e) {
           alert("Update failed");
+      } finally {
+          setActionLoading(null);
       }
   };
 
   const addNewBudget = async () => {
       if(!newCat || !newLimit) return;
+      setActionLoading('add');
       try {
            await fetch(`${API_BASE_URL}/api/budgets`, {
               method: 'POST',
@@ -110,9 +115,11 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
           setNewCat('');
           setNewLimit('');
           setShowAdd(false);
-          onUpdate();
+          await onUpdate();
       } catch (e) {
           alert("Add failed");
+      } finally {
+          setActionLoading(null);
       }
   };
 
@@ -164,7 +171,9 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
                         value={newLimit} onChange={e => setNewLimit(e.target.value)}
                         className="w-24 bg-surface rounded p-2 text-sm outline-none"
                     />
-                    <button onClick={addNewBudget} className="bg-success p-2 rounded text-black"><CheckCircle size={16} /></button>
+                    <button onClick={addNewBudget} disabled={actionLoading === 'add'} className="bg-success p-2 rounded text-black flex items-center justify-center">
+                        {actionLoading === 'add' ? <Loader size={16} className="animate-spin"/> : <CheckCircle size={16} />}
+                    </button>
                 </div>
             )}
 
@@ -174,6 +183,7 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
                     const percent = b.limit > 0 ? Math.min((b.spent / b.limit) * 100, 100) : 0;
                     const color = percent > 90 ? 'bg-danger' : percent > 70 ? 'bg-warning' : 'bg-success';
                     const isEditing = editingId === b._id;
+                    const isLoading = actionLoading === b._id;
 
                     return (
                         <div key={b._id || b.category} className="group">
@@ -189,7 +199,9 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
                                                 onChange={e => setEditLimit(e.target.value)}
                                                 className="w-20 bg-background border border-gray-600 rounded px-1 py-0.5 text-right font-mono"
                                             />
-                                            <button onClick={() => saveEdit(b)} className="text-success hover:text-emerald-400"><Save size={14} /></button>
+                                            <button onClick={() => saveEdit(b)} className="text-success hover:text-emerald-400">
+                                                {isLoading ? <Loader size={14} className="animate-spin"/> : <Save size={14} />}
+                                            </button>
                                             <button onClick={() => setEditingId(null)} className="text-gray-500 hover:text-white"><X size={14} /></button>
                                         </div>
                                     ) : (
@@ -203,8 +215,8 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
                                             <button onClick={() => { setEditingId(b._id!); setEditLimit(b.limit.toString()); }} className="text-gray-500 hover:text-primary">
                                                 <Edit2 size={12} />
                                             </button>
-                                            <button onClick={() => deleteBudget(b._id!)} className="text-gray-500 hover:text-danger">
-                                                <Trash2 size={12} />
+                                            <button onClick={() => deleteBudget(b._id!)} disabled={isLoading} className="text-gray-500 hover:text-danger">
+                                                {isLoading ? <Loader size={12} className="animate-spin"/> : <Trash2 size={12} />}
                                             </button>
                                         </div>
                                     )}
@@ -258,9 +270,10 @@ const Budgets: React.FC<BudgetsProps> = ({ budgets, transactions, token, onUpdat
 
                     <button 
                         onClick={applyChanges}
+                        disabled={actionLoading === 'apply'}
                         className="w-full bg-success/20 hover:bg-success/30 text-success border border-success/30 font-bold py-3 rounded-xl flex items-center justify-center space-x-2 transition-all"
                     >
-                        <CheckCircle size={18} />
+                        {actionLoading === 'apply' ? <Loader size={18} className="animate-spin"/> : <CheckCircle size={18} />}
                         <span>Apply New Budget</span>
                     </button>
                 </div>

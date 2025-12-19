@@ -1,9 +1,8 @@
-
 import React, { useState } from 'react';
 import { Transaction, Budget, Persona, FirewallDecision } from '../types';
 import { checkTransactionWithFirewall } from '../services/geminiService';
 import { parseSMS } from '../services/smsParser';
-import { ShieldCheck, ShieldAlert, ShieldBan, Bot, CloudDownload, RefreshCw, ClipboardPlus, X, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, ShieldBan, Bot, CloudDownload, RefreshCw, ClipboardPlus, X, ArrowDownLeft, ArrowUpRight, Filter, ChevronDown } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
 
 interface TransactionsProps {
@@ -31,6 +30,24 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
   // Paste Modal State
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pastedSMS, setPastedSMS] = useState('');
+
+  // 🆕 FILTER & PAGINATION STATE
+  const [filterType, setFilterType] = useState<'ALL' | 'DEBIT' | 'CREDIT'>('ALL');
+  const [displayCount, setDisplayCount] = useState(10);
+
+  // 🆕 FILTER LOGIC
+  const filteredTransactions = transactions.filter(tx => {
+      if (filterType === 'ALL') return true;
+      return tx.type === filterType;
+  });
+
+  // 🆕 PAGINATION LOGIC
+  const visibleTransactions = filteredTransactions.slice(0, displayCount);
+  const hasMore = displayCount < filteredTransactions.length;
+
+  const handleLoadMore = () => {
+      setDisplayCount(prev => prev + 10);
+  };
 
   const handleManualParse = async () => {
       if (!pastedSMS) return;
@@ -122,7 +139,7 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
       {/* Paste Modal Overlay */}
       {showPasteModal && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm rounded-2xl">
-              <div className="bg-surface border border-gray-700 p-6 rounded-2xl w-96 shadow-2xl">
+              <div className="bg-surface border border-gray-700 p-6 rounded-2xl w-96 shadow-2xl animate-in fade-in zoom-in duration-200">
                   <div className="flex justify-between items-center mb-4">
                       <h3 className="font-bold text-lg flex items-center gap-2">
                          <span className="text-gray-600 font-mono text-sm">#</span> Paste SMS Text
@@ -133,11 +150,11 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
                       value={pastedSMS}
                       onChange={e => setPastedSMS(e.target.value)}
                       placeholder="e.g. Rs. 500 debited from HDFC Bank for Zomato..."
-                      className="w-full h-32 bg-background border border-gray-600 rounded-xl p-3 text-sm outline-none mb-4 resize-none"
+                      className="w-full h-32 bg-background border border-gray-600 rounded-xl p-3 text-sm outline-none mb-4 resize-none focus:border-primary transition-colors"
                   />
                   <button 
                       onClick={handleManualParse}
-                      className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-2 rounded-xl"
+                      className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-2 rounded-xl transition-all"
                   >
                       Parse & Auto-fill
                   </button>
@@ -147,41 +164,57 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
 
       {/* Transaction Feed */}
       <div className="lg:col-span-2 bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
             <h2 className="text-xl font-bold flex items-center space-x-2">
                 <span className="text-gray-500 font-mono text-lg">#</span>
                 <ShieldCheck className="text-primary" />
                 <span>Transaction Log</span>
             </h2>
-            <div className="flex space-x-2">
+            
+            <div className="flex space-x-2 w-full sm:w-auto">
                 <button 
                     onClick={() => setShowPasteModal(true)}
-                    className="bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center space-x-2 transition-all"
+                    className="flex-1 sm:flex-none bg-gray-700 hover:bg-gray-600 text-white text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center space-x-2 transition-all"
                 >
                     <ClipboardPlus size={14} />
-                    <span className="hidden sm:inline">Paste SMS</span>
+                    <span>Paste SMS</span>
                 </button>
                 <button 
                     onClick={onManualSync}
                     disabled={isSyncing}
-                    className="bg-primary/20 text-primary hover:bg-primary/30 text-xs font-bold py-2 px-3 rounded-lg flex items-center space-x-2 transition-all disabled:opacity-50 border border-primary/20"
+                    className="flex-1 sm:flex-none bg-primary/20 text-primary hover:bg-primary/30 text-xs font-bold py-2 px-3 rounded-lg flex items-center justify-center space-x-2 transition-all disabled:opacity-50 border border-primary/20"
                 >
                     <CloudDownload size={14} className={isSyncing ? 'animate-bounce' : ''} />
-                    <span className="hidden sm:inline">{isSyncing ? 'Syncing...' : 'Force Sync'}</span>
+                    <span>{isSyncing ? 'Syncing...' : 'Sync'}</span>
                 </button>
             </div>
         </div>
+
+        {/* 🆕 FILTER TABS */}
+        <div className="flex space-x-1 bg-background p-1 rounded-xl mb-4 border border-gray-700">
+            {(['ALL', 'DEBIT', 'CREDIT'] as const).map(ft => (
+                <button
+                    key={ft}
+                    onClick={() => { setFilterType(ft); setDisplayCount(10); }}
+                    className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                        filterType === ft ? 'bg-gray-700 text-white shadow' : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                >
+                    {ft === 'ALL' ? 'ALL' : ft === 'DEBIT' ? 'EXPENSES' : 'INCOME'}
+                </button>
+            ))}
+        </div>
         
         <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-            {transactions.length === 0 && (
+            {visibleTransactions.length === 0 && (
                 <div className="text-center text-gray-500 py-10">
-                    <RefreshCw size={40} className="mx-auto mb-2 opacity-20" />
-                    <p>Waiting for new transactions...</p>
-                    <p className="text-xs">MoneyOS syncs with your phone automatically.</p>
+                    <Filter size={40} className="mx-auto mb-2 opacity-20" />
+                    <p>No transactions found for this filter.</p>
                 </div>
             )}
-            {transactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl border border-gray-800 hover:border-gray-600 transition-colors">
+            
+            {visibleTransactions.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-4 bg-background/50 rounded-xl border border-gray-800 hover:border-gray-600 transition-colors animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div>
                         <div className="flex items-center gap-2">
                             {tx.type === 'CREDIT' ? <ArrowDownLeft size={16} className="text-success" /> : <ArrowUpRight size={16} className="text-gray-400" />}
@@ -204,6 +237,17 @@ const Transactions: React.FC<TransactionsProps> = ({ transactions, budgets, toke
                     </div>
                 </div>
             ))}
+
+            {/* 🆕 LOAD MORE BUTTON */}
+            {hasMore && (
+                <button 
+                    onClick={handleLoadMore}
+                    className="w-full py-3 mt-2 text-xs font-bold text-gray-400 hover:text-white bg-gray-800/50 hover:bg-gray-700 rounded-xl border border-dashed border-gray-700 hover:border-gray-500 transition-all flex items-center justify-center gap-2"
+                >
+                    <span>View More Transactions</span>
+                    <ChevronDown size={14} />
+                </button>
+            )}
         </div>
       </div>
 

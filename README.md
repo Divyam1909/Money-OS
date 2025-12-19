@@ -1,129 +1,103 @@
+# MoneyOS 🚀
+**The AI-Powered Operating System for Your Personal Finances.**
 
-# MoneyOS - AI Financial Operating System
+MoneyOS is not just an expense tracker; it is a proactive financial intelligence system. It uses Google's Gemini AI to analyze your spending behavior, enforce budgets, split bills, and predict whether you can actually afford that new gadget.
 
-## Feature Checklist
-
-### 🔥 A. Dashboard (Mission Control)
-- [x] Savings Health Indicator (Green/Yellow/Red)
-- [x] Upcoming Bills & Alerts
-- [x] Summary of Recent Autopilot Actions
-- [x] Quick Spending Snapshot (weekly/monthly)
-- [x] Group Expenses Overview (from SmartSplit)
-- [x] Time-Value Efficiency Score
-
-### 🔥 B. AI Spending Firewall (Persona-Based Decision System)
-- [x] Transaction input/import (manual)
-- [x] Real-time firewall evaluation for each transaction
-- [x] Persona selection: Strict / Balanced / Chill
-- [x] Verdict types: Allow, Caution (with impact explanation), Block (with override)
-- [x] Gemini-generated reasoning for spending suggestions
-- [x] Transaction tagging into budget categories
-
-### 🔥 C. ShiftBudget Auto-Adjustment Engine
-- [x] Weekly auto-budget recalculation
-- [x] Adjustments based on spending, bills, goals
-- [x] Gemini summary of "Why your budget changed"
-- [x] Visualization of old vs new budget
-
-### 🔥 D. SmartSplit AI (Group Finances Manager)
-- [x] Create groups (friends, roommates, trips, etc.) via text context
-- [x] Add expenses via receipt text / UPI message paste
-- [x] AI extraction of "who paid what"
-- [x] Automatic calculation of who owes whom
-- [x] "Minimum transactions" settlement algorithm
-- [x] Payment link generation (simulated)
-- [x] Fairness analysis alerts
-
-### 🔥 E. Time-Value Analyzer
-- [x] Subscription list with cost-per-hour calculation
-- [x] Cost-per-use for items (clothing, electronics, gym, etc.)
-- [x] "Inefficiency flags" (auto-detected wasteful expenses)
-- [x] Gemini recommendations ("Downgrade this", "Use this more", etc.)
-- [x] Monthly efficiency score meter
-
-### 🔥 F. Autopilot Actions (MoneyOS Behaviors)
-- [x] Safe-to-save transfers (recommendations logs)
-- [x] Bill payment timing optimization
-- [x] Subscription pruning suggestions
-- [x] Real-time spending limit nudges
-- [x] Micro-adjustments to category budgets
-
-### 🔥 G. Transactions Module
-- [x] Add / import / edit transactions
-- [x] Categorization
-- [x] Firewall decision logged
-- [x] Charts: spending trend
-- [x] Search + filter (via Dashboard summary)
-
-### 🔥 H. Goals & Planning Module
-- [x] Users can define savings goals
-- [x] Timeline estimation (Gemini-assisted)
-- [x] Impact analysis ("If you buy this, your goal delays by X days")
-- [x] Goal progress visualization
-
-### 🔥 I. User Personalization
-- [x] Persona selection (Strict / Balanced / Chill)
-- [x] Monthly income & fixed expenses setup (via Budgets)
-- [x] Notifications system (via Autopilot logs)
-
-### 🔥 J. Visual & UX Essentials
-- [x] Consistent OS-like layout
-- [x] Clean, futuristic UI
-- [x] Clear callouts for AI-generated insights
-- [x] Mobile-friendly responsive design
-
-### 🔥 K. System Insights Page
-- [x] "What Autopilot Learned About You This Month"
-- [x] Spending habits summary
-- [x] Budget drift graph/analysis
-- [x] Overspending triggers detected
-- [x] Behavioral notes (Gemini-generated)
+It replaces the "guilt" of spending with **data-driven confidence**.
 
 ---
 
-## 📱 SMS Parsing Guide
+## 🌟 Key Features
 
-MoneyOS uses a Regex-based engine tailored for Indian banking SMS formats. Here is what works:
+### 1. Mission Control (Dashboard)
+Your real-time financial cockpit.
+- **Spending Oscilloscope:** A dual-wave chart (Green vs. Red) showing Income vs. Expenses over the last 7 days.
+- **Savings Health Meter:** visualizes your "Financial Buffer"—how safe you are from hitting zero.
+- **System Logs:** A live feed of important events (e.g., "High Value Transaction Detected", "Firewall Blocked Purchase").
+- **Financial Freedom Score:** Calculates what % of your income is yours to keep vs. locked in fixed bills.
 
-### ✅ Supported Formats
-The parser looks for keywords (debited, paid, spent) combined with currency symbols (Rs., INR, ₹).
+### 2. Transaction Log & AI Firewall 🛡️
+Stop bad spending *before* it happens.
+- **AI Firewall:** Before you buy something, ask the AI. It analyzes your current budget and gives a decision (**ALLOW**, **CAUTION**, or **BLOCK**) based on your chosen persona (Strict, Balanced, or Chill).
+- **Smart SMS Parser:** Paste raw SMS text (e.g., *"Paid Rs. 250 to Uber"*), and the system automatically extracts the Amount, Merchant, and Category.
+- **Smart Filters:** Instantly toggle between Expenses, Income, or All transactions.
 
-1.  **Bank Debits:**
-    *   "Rs. 500 debited from a/c 1234 at Zomato on 12-05-24."
-    *   "INR 1200.50 spent on your HDFC Card ending 8899 at STARBUCKS."
+### 3. ShiftBudget Engine 🔄
+Budgets that adapt to real life.
+- **Auto-Adjust:** If you overspend on "Food" but underspend on "Travel," the AI suggests moving money between categories to keep your total budget balanced.
+- **Visual Allocations:** Color-coded progress bars (Green/Yellow/Red) show exactly how close you are to your limits.
 
-2.  **UPI Transactions:**
-    *   "Paid Rs 250 to rahul@upi. Ref 123456."
-    *   "Debited ₹1500; VPA: landlord@okicici."
+### 4. SmartSplit Harmonizer 🤝
+No more awkward math with friends.
+- **Natural Language Splitter:** Just type or paste a messy note like *"Alice paid 500 for pizza, Bob paid 200 for taxi."*
+- **AI Settlement Plan:** The system calculates the fairest way to settle debts and generates a clear "Who pays Whom" list.
 
-3.  **Credit Alerts:**
-    *   "Your a/c is credited with Rs 50,000 (Salary)."
+### 5. Time-Value Analysis ⏳
+Is that subscription worth your life energy?
+- **Subscription Auditor:** Analyzes your recurring bills (Netflix, Gym) and calculates an "ROI Score" to tell you if you should Cancel or Keep them.
+- **Purchase Simulator:** Input a potential big buy (e.g., "Gaming Console"), and the AI predicts if it’s a "High Utility Asset" or a "Money Pit."
 
-4.  **Wallet Usage:**
-    *   "Paytm: Paid Rs 40 for Uber."
+### 6. Goals & Strategic Planning 🎯
+Turn wishes into math.
+- **Feasibility Check:** Tell the system *"I want to save ₹50,000 for a trip by December."* It analyzes your income and spending habits to tell you if it's **Easy**, **Stretch**, or **Impossible**.
+- **Action Plans:** If a goal is impossible, it tells you exactly which budgets to cut to make it happen.
 
-### ❌ What is Ignored
-To prevent spam and false positives, the system ignores messages containing:
-*   OTP, Verification Code, Login
-*   Plan Expiring, Recharge Offers
-*   Loan Approvals (Spam)
+### 7. System Insights 🧠
+Understand the *Why* behind your spending.
+- **Behavioral Analysis:** The AI scans your history to find patterns (e.g., *"You consistently overspend on weekends"*).
+- **Trigger Radar:** Identifies psychological triggers like "Stress Shopping" or "Social Pressure."
+
+### 8. Category Intelligence (Settings) ⚙️
+Teach the system your habits.
+- **Dynamic Rules:** Add custom rules like *"If message contains 'BLINKIT', always categorize as 'Grocery'."*
+- **Baseline Config:** Set your monthly income and fixed obligations to calculate your true discretionary cash flow.
 
 ---
 
-## 🔮 Roadmap & Suggestions
+## 🛠️ Tech Stack
 
-1.  **Receipt Scanning (Gemini Vision)**
-    *   Allow users to upload photos of physical receipts. Use Gemini 2.5 Flash to extract line items and totals automatically.
+* **Frontend:** React (Vite), TypeScript, Tailwind CSS, Recharts (Data Viz), Lucide React (Icons).
+* **Backend:** Node.js, Express.js.
+* **Database:** MongoDB (Atlas/Railway).
+* **AI Core:** Google Gemini Pro API (`@google/genai`).
+* **Authentication:** JWT (JSON Web Tokens).
 
-2.  **Voice Input Command**
-    *   Add a microphone button to the Dashboard.
-    *   "I just spent 500 rupees on a Taxi." -> Auto-creates transaction.
+---
 
-3.  **Visual Category Breakdown**
-    *   Add a Donut Chart to the Dashboard to visualize % spend per category (Food vs Transport vs Savings).
+## 🚀 How to Run
 
-4.  **PWA (Progressive Web App)**
-    *   Make the site installable on mobile phones so users can access it like a native app.
+1.  **Clone the Repository:**
+    ```bash
+    git clone [https://github.com/yourusername/moneyos.git](https://github.com/yourusername/moneyos.git)
+    ```
 
-5.  **Recurring Subscription Detection**
-    *   If the AI sees "Netflix" or "Spotify" in transactions every month, auto-add it to the "Recurring Expenses" settings.
+2.  **Frontend Setup:**
+    ```bash
+    cd frontend
+    npm install
+    npm run dev
+    ```
+
+3.  **Backend Setup:**
+    ```bash
+    cd backend
+    npm install
+    # Create a .env file with MONGO_URI, JWT_SECRET, SMS_SECRET, and API_KEY (Gemini)
+    npm start
+    ```
+
+4.  **Access:**
+    Open `http://localhost:5173` in your browser.
+
+---
+
+## 🤖 AI Personas
+
+MoneyOS allows you to choose your "Financial Boss":
+* **STRICT:** Zero tolerance for overspending. Will block unnecessary purchases.
+* **BALANCED:** The standard mode. Gives warnings but allows flexibility.
+* **CHILL:** Relaxed. Focuses on big-picture trends rather than micro-transactions.
+
+---
+
+*Built with ❤️ for financial freedom.*
