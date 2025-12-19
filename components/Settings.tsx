@@ -1,28 +1,42 @@
-
 import React, { useState, useEffect } from 'react';
-import { Save, Plus, Trash2, CreditCard, DollarSign, Activity } from 'lucide-react';
+import { Save, Plus, Trash2, DollarSign, Activity, BrainCircuit, ArrowRight } from 'lucide-react';
 import { RecurringExpense } from '../types';
 import { API_BASE_URL } from '../constants';
+
+// Define the Rule Type
+interface CategoryRule {
+    _id: string;
+    keyword: string;
+    category: string;
+}
 
 const Settings: React.FC = () => {
     const [income, setIncome] = useState<string>('');
     const [recurring, setRecurring] = useState<RecurringExpense[]>([]);
+    const [rules, setRules] = useState<CategoryRule[]>([]); // 🆕 Rules State
     
-    // New Recurring Item State
+    // Recurring Form State
     const [newName, setNewName] = useState('');
     const [newAmount, setNewAmount] = useState('');
     const [newDate, setNewDate] = useState('1');
     const [newFreq, setNewFreq] = useState<'Monthly' | 'Yearly' | 'Weekly'>('Monthly');
+
+    // Rules Form State 🆕
+    const [ruleKeyword, setRuleKeyword] = useState('');
+    const [ruleCategory, setRuleCategory] = useState('Food');
 
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
 
     useEffect(() => {
         fetchSettings();
+        fetchRules(); // 🆕 Load Rules on mount
     }, []);
 
+    const getToken = () => localStorage.getItem('moneyos_token');
+
     const fetchSettings = async () => {
-        const token = localStorage.getItem('moneyos_token');
+        const token = getToken();
         if (!token) return;
 
         try {
@@ -39,8 +53,57 @@ const Settings: React.FC = () => {
         }
     };
 
+    // 🆕 FETCH RULES
+    const fetchRules = async () => {
+        const token = getToken();
+        if (!token) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/rules`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (data.success) setRules(data.rules);
+        } catch (e) {
+            console.error("Failed to load rules");
+        }
+    };
+
+    // 🆕 ADD RULE
+    const addRule = async () => {
+        if (!ruleKeyword) return;
+        const token = getToken();
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/rules`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ keyword: ruleKeyword, category: ruleCategory })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setRules([...rules, data.rule]);
+                setRuleKeyword('');
+            }
+        } catch (e) {
+            alert("Failed to add rule");
+        }
+    };
+
+    // 🆕 DELETE RULE
+    const deleteRule = async (id: string) => {
+        const token = getToken();
+        try {
+            await fetch(`${API_BASE_URL}/api/rules/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setRules(rules.filter(r => r._id !== id));
+        } catch (e) {
+            alert("Failed to delete rule");
+        }
+    };
+
     const handleSave = async () => {
-        const token = localStorage.getItem('moneyos_token');
+        const token = getToken();
         if (!token) return;
 
         setLoading(true);
@@ -101,16 +164,16 @@ const Settings: React.FC = () => {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-8rem)]">
-            {/* Configuration Form */}
-            <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col overflow-y-auto">
+            {/* LEFT COLUMN: Configuration Form */}
+            <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col overflow-y-auto custom-scrollbar">
                 <h2 className="text-xl font-bold mb-6 flex items-center space-x-2">
                     <span className="text-gray-500 font-mono text-lg">#</span>
                     <Activity className="text-primary" />
                     <span>System Configuration</span>
                 </h2>
 
-                <div className="space-y-6">
-                    {/* Income Section */}
+                <div className="space-y-8">
+                    {/* 1. Income Section */}
                     <div>
                         <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-2">
                             <span className="text-gray-600 font-mono text-[10px]">#</span> Monthly Inflow
@@ -132,7 +195,7 @@ const Settings: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Recurring Expenses Section */}
+                    {/* 2. Recurring Expenses Section */}
                     <div>
                         <label className="block text-xs font-bold text-gray-400 mb-2 uppercase tracking-wider flex items-center gap-2">
                             <span className="text-gray-600 font-mono text-[10px]">#</span> Fixed Outflow (Autopay)
@@ -167,7 +230,7 @@ const Settings: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="space-y-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                        <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                             {recurring.map(item => (
                                 <div key={item.id} className="flex items-center justify-between p-3 bg-background/50 rounded-lg border border-gray-700">
                                     <div className="flex items-center space-x-3">
@@ -187,21 +250,74 @@ const Settings: React.FC = () => {
                             ))}
                         </div>
                     </div>
+
+                    {/* 3. 🆕 Category Intelligence Section */}
+                    <div>
+                        <label className="block text-xs font-bold text-accent mb-2 uppercase tracking-wider flex items-center gap-2">
+                            <span className="text-gray-600 font-mono text-[10px]">#</span> Category Intelligence
+                        </label>
+                        <div className="bg-background border border-gray-600 rounded-xl p-4 mb-4">
+                            <p className="text-xs text-gray-500 mb-3">
+                                Teach MoneyOS to recognize specific keywords in your SMS (e.g. "BLINKIT" → "Grocery").
+                            </p>
+                            <div className="flex gap-2 mb-2">
+                                <input 
+                                    className="flex-1 bg-surface border border-gray-700 rounded-lg p-2 text-sm outline-none focus:border-accent"
+                                    placeholder="Keyword (e.g. BLINKIT)"
+                                    value={ruleKeyword} onChange={e => setRuleKeyword(e.target.value.toUpperCase())}
+                                />
+                                <select
+                                    className="w-32 bg-surface border border-gray-700 rounded-lg p-2 text-xs outline-none focus:border-accent"
+                                    value={ruleCategory} onChange={e => setRuleCategory(e.target.value)}
+                                >
+                                    <option value="Food">Food</option>
+                                    <option value="Grocery">Grocery</option>
+                                    <option value="Transport">Transport</option>
+                                    <option value="Shopping">Shopping</option>
+                                    <option value="Utilities">Utilities</option>
+                                    <option value="Health">Health</option>
+                                    <option value="Entertainment">Entertainment</option>
+                                </select>
+                                <button onClick={addRule} className="bg-accent hover:bg-violet-600 text-white p-2 rounded-lg">
+                                    <Plus size={16} />
+                                </button>
+                            </div>
+                            
+                            {/* Rules List */}
+                            <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                {rules.map(rule => (
+                                    <div key={rule._id} className="flex items-center justify-between p-2 bg-background/50 rounded-lg border border-gray-700/50">
+                                        <div className="flex items-center gap-2">
+                                            <BrainCircuit size={14} className="text-gray-500" />
+                                            <span className="font-mono text-xs font-bold text-white">{rule.keyword}</span>
+                                            <ArrowRight size={12} className="text-gray-600" />
+                                            <span className="text-xs text-accent">{rule.category}</span>
+                                        </div>
+                                        <button onClick={() => deleteRule(rule._id)} className="text-gray-500 hover:text-danger">
+                                            <Trash2 size={12} />
+                                        </button>
+                                    </div>
+                                ))}
+                                {rules.length === 0 && <div className="text-center text-xs text-gray-600 italic">No custom rules added.</div>}
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="mt-auto pt-6">
+                <div className="mt-8 pt-6 border-t border-gray-800">
                     {message && <div className="text-success text-center text-sm mb-2">{message}</div>}
                     <button 
                         onClick={handleSave}
                         disabled={loading}
                         className="w-full bg-primary hover:bg-blue-600 text-white font-bold py-4 rounded-xl flex items-center justify-center space-x-2 transition-all disabled:opacity-50"
                     >
-                        {loading ? 'Saving...' : 'Update Financial Profile'}
+                        <Save size={18} />
+                        <span>{loading ? 'Saving...' : 'Update Financial Profile'}</span>
                     </button>
                 </div>
             </div>
 
-            {/* Analysis Panel */}
+            {/* RIGHT COLUMN: Analysis Panel */}
             <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex flex-col justify-center relative overflow-hidden">
                 <div className="absolute top-0 right-0 p-10 opacity-5">
                     <DollarSign size={200} />

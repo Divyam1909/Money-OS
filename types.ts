@@ -60,6 +60,12 @@ export interface Settlement {
   amount: number;
 }
 
+export interface CategoryRule {
+  _id: string;
+  keyword: string;
+  category: string;
+}
+
 export interface Goal {
   id: string;
   name: string;
