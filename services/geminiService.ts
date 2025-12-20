@@ -29,47 +29,12 @@ const getAI = () => {
 const getModelName = (): string => {
   const env = (import.meta as any).env ?? {};
   const raw: unknown = env.VITE_GEMINI_MODEL;
-  // Default to a model that typically has free-tier availability.
-  return (typeof raw === 'string' && raw.trim()) ? raw.trim() : 'gemini-1.5-flash';
+  // Default to a model that has free-tier availability and is supported by v1beta generateContent.
+  // (Some older model IDs like `gemini-1.5-flash` may 404 on v1beta for certain keys/projects.)
+  return (typeof raw === 'string' && raw.trim()) ? raw.trim() : 'gemini-2.0-flash-lite';
 };
 
-// (Internal helper kept for future refactors; not currently used.)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const generateWithRetry = async (args: { ai: GoogleGenAI; prompt: string }) => {
-  const model = getModelName();
-  try {
-    return await args.ai.models.generateContent({
-      model,
-      contents: args.prompt,
-      // Individual callers still pass config/schema below via spread (we keep this simple).
-    } as any);
-  } catch (err: any) {
-    const status = err?.status ?? err?.code ?? err?.response?.status;
-    const msg: string = String(err?.message ?? '');
-
-    // If the model has 0 quota for this key/project, try a more compatible fallback once.
-    // This commonly happens when using newer models on the free tier (quota shows as "limit: 0").
-    if (status === 429 && /limit:\s*0/i.test(msg) && model !== 'gemini-1.5-flash') {
-      return await args.ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: args.prompt,
-      } as any);
-    }
-
-    // Basic backoff using RetryInfo hint in the error message, if present.
-    if (status === 429) {
-      const match = msg.match(/retry in\s+([0-9.]+)s/i);
-      const delayMs = match ? Math.ceil(Number(match[1]) * 1000) : 20000;
-      await sleep(delayMs);
-      return await args.ai.models.generateContent({
-        model,
-        contents: args.prompt,
-      } as any);
-    }
-
-    throw err;
-  }
-};
+// (Retry/fallback logic is implemented inline in the most frequently-hit call below.)
 
 export const checkTransactionWithFirewall = async (
     transaction: Omit<Transaction, 'id' | 'date' | 'firewallDecision'>,
@@ -118,9 +83,9 @@ export const checkTransactionWithFirewall = async (
       } catch (err: any) {
         const status = err?.status ?? err?.code ?? err?.response?.status;
         const msg: string = String(err?.message ?? '');
-        if (status === 429 && /limit:\s*0/i.test(msg) && model !== 'gemini-1.5-flash') {
+        if (status === 429 && /limit:\s*0/i.test(msg) && model !== 'gemini-2.0-flash-lite') {
           return await ai.models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash-lite',
             contents: prompt,
             config: {
                 responseMimeType: 'application/json',

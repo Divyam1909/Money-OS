@@ -53,6 +53,7 @@ We will deploy `server.js` as a web service.
     *   **Environment Variables:**
         *   Key: `VITE_API_KEY` | Value: (Your Gemini API Key)
         *   (Optional) Key: `VITE_GEMINI_API_KEY` | Value: (Same as above, if you prefer a clearer name)
+        *   (Optional) Key: `VITE_GEMINI_MODEL` | Value: `gemini-2.0-flash-lite` (recommended free-tier model)
     *   Click **Deploy**.
 
 ---
