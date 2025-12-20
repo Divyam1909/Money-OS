@@ -1,9 +1,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Budget, FirewallResponse, Persona, Transaction, BudgetsResponse, SplitResponse, TimeValueAnalysis, GoalAnalysisResponse, InsightReport } from "../types";
 
+// Replace your old getAI with this:
 const getAI = () => {
-    return new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-};
+    // Use (import.meta as any) to bypass the TypeScript check 
+    // until you update your env.d.ts file.
+    const env = (import.meta as any).env;
+    const key = env.VITE_API_KEY || '';
+    return new GoogleGenAI({ apiKey: key });
+  };
 
 export const checkTransactionWithFirewall = async (
     transaction: Omit<Transaction, 'id' | 'date' | 'firewallDecision'>,
