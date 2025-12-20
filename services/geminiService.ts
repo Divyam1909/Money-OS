@@ -45,9 +45,11 @@ const getAI = () => {
 const getModelName = (): string => {
   const env = (import.meta as any).env ?? {};
   const raw: unknown = env.VITE_GEMINI_MODEL;
-  // Default to a model that has free-tier availability and is supported by v1beta generateContent.
-  // (Some older model IDs like `gemini-1.5-flash` may 404 on v1beta for certain keys/projects.)
-  return (typeof raw === 'string' && raw.trim()) ? raw.trim() : 'gemini-2.0-flash-lite';
+  // Default to a model that commonly has non-zero free-tier quota and is supported by v1beta generateContent.
+  // NOTE: If you see 429 with `limit: 0`, it's not "too many requests" — it's "this model has zero quota
+  // for this API key/project". In that case, set `VITE_GEMINI_MODEL` to a model that shows non-zero limits
+  // on https://ai.dev/usage?tab=rate-limit (e.g. `gemini-2.5-flash`).
+  return (typeof raw === 'string' && raw.trim()) ? raw.trim() : 'gemini-2.5-flash';
 };
 
 // (Retry/fallback logic is implemented inline in the most frequently-hit call below.)
