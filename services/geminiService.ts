@@ -3,6 +3,22 @@ import { Budget, FirewallResponse, Persona, Transaction, BudgetsResponse, SplitR
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+const explainQuotaZero = (model: string) => {
+  // This happens when the project/key has *no* unpaid quota granted (limit: 0),
+  // so retries will never succeed until the account/project settings change.
+  return [
+    `Gemini API quota is 0 for model "${model}" (free-tier requests/tokens are disabled for this API key/project).`,
+    ``,
+    `This is NOT a code bug and NOT a temporary rate-limit — the backend is saying your limit is literally 0.`,
+    ``,
+    `Fix:`,
+    `- Go to your Gemini usage page and check rate limits: https://ai.dev/usage?tab=rate-limit`,
+    `- Make sure you have accepted the latest Gemini API terms in the account/project that owns this API key (Google can require this for unpaid quota). See: https://ai.google.dev/gemini-api/terms`,
+    `- If you're serving this app to end users in the EEA / Switzerland / UK, unpaid usage is not allowed per the updated terms; you must use Paid Services / billing for production clients.`,
+    `- Otherwise, create a fresh API key in the correct project after accepting terms, or attach billing (paid quota) to remove the 0-limit.`,
+  ].join("\n");
+};
+
 // Replace your old getAI with this:
 const getAI = () => {
     // Note: This app runs in the browser (Vite). Env vars are injected at BUILD time.
@@ -83,23 +99,10 @@ export const checkTransactionWithFirewall = async (
       } catch (err: any) {
         const status = err?.status ?? err?.code ?? err?.response?.status;
         const msg: string = String(err?.message ?? '');
-        if (status === 429 && /limit:\s*0/i.test(msg) && model !== 'gemini-2.0-flash-lite') {
-          return await ai.models.generateContent({
-            model: 'gemini-2.0-flash-lite',
-            contents: prompt,
-            config: {
-                responseMimeType: 'application/json',
-                responseSchema: {
-                    type: Type.OBJECT,
-                    properties: {
-                        decision: { type: Type.STRING, enum: ['ALLOW', 'CAUTION', 'BLOCK'] },
-                        reason: { type: Type.STRING },
-                        futureImpact: { type: Type.STRING }
-                    },
-                    required: ['decision', 'reason', 'futureImpact']
-                }
-            }
-          });
+
+        // Hard-stop: quota is literally 0, so retrying can't help.
+        if (status === 429 && /limit:\s*0/i.test(msg)) {
+          throw new Error(explainQuotaZero(model));
         }
         if (status === 429) {
           const match = msg.match(/retry in\s+([0-9.]+)s/i);
@@ -421,4 +424,4 @@ export const parseVoiceCommand = async (transcript: string): Promise<Partial<Tra
     console.error("Voice Parse Error:", error);
     return null;
   }
- };
+};
