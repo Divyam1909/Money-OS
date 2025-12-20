@@ -51,7 +51,8 @@ We will deploy `server.js` as a web service.
         *   Build Command: `npm run build`.
         *   Output Directory: `dist`.
     *   **Environment Variables:**
-        *   Key: `API_KEY` | Value: (Your Gemini API Key)
+        *   Key: `VITE_API_KEY` | Value: (Your Gemini API Key)
+        *   (Optional) Key: `VITE_GEMINI_API_KEY` | Value: (Same as above, if you prefer a clearer name)
     *   Click **Deploy**.
 
 ---

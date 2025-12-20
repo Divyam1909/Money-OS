@@ -3,10 +3,24 @@ import { Budget, FirewallResponse, Persona, Transaction, BudgetsResponse, SplitR
 
 // Replace your old getAI with this:
 const getAI = () => {
-    // Use (import.meta as any) to bypass the TypeScript check 
-    // until you update your env.d.ts file.
-    const env = (import.meta as any).env;
-    const key = env.VITE_API_KEY || '';
+    // Note: This app runs in the browser (Vite). Env vars are injected at BUILD time.
+    // If `VITE_API_KEY` is missing in the deployed build, requests go out "unregistered"
+    // and Gemini returns 403 PERMISSION_DENIED.
+    const env = (import.meta as any).env ?? {};
+    const rawKey: unknown = env.VITE_API_KEY ?? env.VITE_GEMINI_API_KEY;
+    const key = (typeof rawKey === 'string' ? rawKey : '').trim();
+
+    if (!key) {
+      // Don't leak secrets; just explain how to fix.
+      // Common causes:
+      // - Vercel env var added but NOT redeployed (build-time injection)
+      // - Env var added to Preview but not Production (or vice versa)
+      // - PWA service worker serving an older cached bundle
+      throw new Error(
+        "Missing Gemini API key. Set `VITE_API_KEY` (or `VITE_GEMINI_API_KEY`) in Vercel for the correct environment and redeploy. If you use the PWA, hard-refresh or clear site data / unregister the service worker so the new build is loaded."
+      );
+    }
+
     return new GoogleGenAI({ apiKey: key });
   };
 
