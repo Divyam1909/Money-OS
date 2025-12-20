@@ -1,6 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Budget, FirewallResponse, Persona, Transaction, BudgetsResponse, SplitResponse, TimeValueAnalysis, GoalAnalysisResponse, InsightReport } from "../types";
 
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
 // Replace your old getAI with this:
 const getAI = () => {
     // Note: This app runs in the browser (Vite). Env vars are injected at BUILD time.
@@ -23,6 +25,51 @@ const getAI = () => {
 
     return new GoogleGenAI({ apiKey: key });
   };
+
+const getModelName = (): string => {
+  const env = (import.meta as any).env ?? {};
+  const raw: unknown = env.VITE_GEMINI_MODEL;
+  // Default to a model that typically has free-tier availability.
+  return (typeof raw === 'string' && raw.trim()) ? raw.trim() : 'gemini-1.5-flash';
+};
+
+// (Internal helper kept for future refactors; not currently used.)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const generateWithRetry = async (args: { ai: GoogleGenAI; prompt: string }) => {
+  const model = getModelName();
+  try {
+    return await args.ai.models.generateContent({
+      model,
+      contents: args.prompt,
+      // Individual callers still pass config/schema below via spread (we keep this simple).
+    } as any);
+  } catch (err: any) {
+    const status = err?.status ?? err?.code ?? err?.response?.status;
+    const msg: string = String(err?.message ?? '');
+
+    // If the model has 0 quota for this key/project, try a more compatible fallback once.
+    // This commonly happens when using newer models on the free tier (quota shows as "limit: 0").
+    if (status === 429 && /limit:\s*0/i.test(msg) && model !== 'gemini-1.5-flash') {
+      return await args.ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: args.prompt,
+      } as any);
+    }
+
+    // Basic backoff using RetryInfo hint in the error message, if present.
+    if (status === 429) {
+      const match = msg.match(/retry in\s+([0-9.]+)s/i);
+      const delayMs = match ? Math.ceil(Number(match[1]) * 1000) : 20000;
+      await sleep(delayMs);
+      return await args.ai.models.generateContent({
+        model,
+        contents: args.prompt,
+      } as any);
+    }
+
+    throw err;
+  }
+};
 
 export const checkTransactionWithFirewall = async (
     transaction: Omit<Transaction, 'id' | 'date' | 'firewallDecision'>,
@@ -49,22 +96,70 @@ export const checkTransactionWithFirewall = async (
         Return a decision (ALLOW, CAUTION, BLOCK), a reason, and a specific future impact statement (e.g., "This delays your vacation saving").
     `;
 
-    const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
-        contents: prompt,
-        config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                    decision: { type: Type.STRING, enum: ['ALLOW', 'CAUTION', 'BLOCK'] },
-                    reason: { type: Type.STRING },
-                    futureImpact: { type: Type.STRING }
-                },
-                required: ['decision', 'reason', 'futureImpact']
+    const response = await (async () => {
+      const model = getModelName();
+      try {
+        return await ai.models.generateContent({
+          model,
+          contents: prompt,
+          config: {
+              responseMimeType: 'application/json',
+              responseSchema: {
+                  type: Type.OBJECT,
+                  properties: {
+                      decision: { type: Type.STRING, enum: ['ALLOW', 'CAUTION', 'BLOCK'] },
+                      reason: { type: Type.STRING },
+                      futureImpact: { type: Type.STRING }
+                  },
+                  required: ['decision', 'reason', 'futureImpact']
+              }
+          }
+        });
+      } catch (err: any) {
+        const status = err?.status ?? err?.code ?? err?.response?.status;
+        const msg: string = String(err?.message ?? '');
+        if (status === 429 && /limit:\s*0/i.test(msg) && model !== 'gemini-1.5-flash') {
+          return await ai.models.generateContent({
+            model: 'gemini-1.5-flash',
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        decision: { type: Type.STRING, enum: ['ALLOW', 'CAUTION', 'BLOCK'] },
+                        reason: { type: Type.STRING },
+                        futureImpact: { type: Type.STRING }
+                    },
+                    required: ['decision', 'reason', 'futureImpact']
+                }
             }
+          });
         }
-    });
+        if (status === 429) {
+          const match = msg.match(/retry in\s+([0-9.]+)s/i);
+          const delayMs = match ? Math.ceil(Number(match[1]) * 1000) : 20000;
+          await sleep(delayMs);
+          return await ai.models.generateContent({
+            model,
+            contents: prompt,
+            config: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                    type: Type.OBJECT,
+                    properties: {
+                        decision: { type: Type.STRING, enum: ['ALLOW', 'CAUTION', 'BLOCK'] },
+                        reason: { type: Type.STRING },
+                        futureImpact: { type: Type.STRING }
+                    },
+                    required: ['decision', 'reason', 'futureImpact']
+                }
+            }
+          });
+        }
+        throw err;
+      }
+    })();
 
     // 🛠️ FIX: Removed ()
     const text = response.text;
@@ -94,7 +189,7 @@ export const runShiftBudget = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: getModelName(),
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -141,7 +236,7 @@ export const analyzeSmartSplit = async (inputText: string): Promise<SplitRespons
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: getModelName(),
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -207,7 +302,7 @@ export const analyzeTimeValue = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: getModelName(),
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -255,7 +350,7 @@ export const analyzeGoal = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: getModelName(),
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -296,7 +391,7 @@ export const generateMonthlyInsights = async (
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: getModelName(),
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -335,7 +430,7 @@ export const parseVoiceCommand = async (transcript: string): Promise<Partial<Tra
     `;
 
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: getModelName(),
         contents: prompt,
         config: {
             responseMimeType: 'application/json',
@@ -361,4 +456,4 @@ export const parseVoiceCommand = async (transcript: string): Promise<Partial<Tra
     console.error("Voice Parse Error:", error);
     return null;
   }
-};
+ };
