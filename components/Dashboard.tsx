@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { TrendingUp, Zap, Users, Clock, ShieldCheck, Activity, AlertTriangle, CheckCircle, Mic, Loader, X, EyeOff } from 'lucide-react';
+import { TrendingUp, Zap, Users, Clock, ShieldCheck, Activity, AlertTriangle, CheckCircle, Mic, Loader, X, EyeOff, Calendar } from 'lucide-react';
 import { Transaction, Budget, UserProfile } from '../types';
 import { parseVoiceCommand } from '../services/geminiService';
 import { API_BASE_URL } from '../constants';
@@ -9,11 +9,16 @@ interface DashboardProps {
     transactions: Transaction[];
     budgets: Budget[];
     userSettings: UserProfile | null;
-    isPrivacy: boolean; // 🆕 STEALTH MODE PROP
+    isPrivacy: boolean;
 }
+
+type ChartRange = '1D' | '1W' | '1M' | '1Y';
 
 const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, userSettings, isPrivacy }) => {
   
+  // 🆕 CHART FILTER STATE
+  const [chartRange, setChartRange] = useState<ChartRange>('1W');
+
   // --- 1. CORE CALCULATIONS ---
   const totalLimit = budgets.reduce((acc, b) => acc + b.limit, 0);
   const totalSpent = budgets.reduce((acc, b) => acc + b.spent, 0);
@@ -34,7 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, userSettin
 
   const timeValueScore = calculateTimeValueScore();
 
-  // --- 2. LOGS & CHART DATA ---
+  // --- 2. LOGS & CHART DATA (UPDATED) ---
   const generateSystemLogs = () => {
       const logs = [];
       const blockedTx = transactions.find(t => t.firewallDecision === 'BLOCK');
@@ -80,28 +85,87 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, userSettin
 
   const systemLogs = generateSystemLogs();
 
-  const processChartData = () => {
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const data = days.map(d => ({ name: d, debit: 0, credit: 0 }));
-      
-      const last7Days = new Date();
-      last7Days.setDate(last7Days.getDate() - 7);
+  // 🆕 DYNAMIC FORWARD-LINEAR CHART LOGIC
+  const chartData = useMemo(() => {
+    const data: { name: string; debit: number; credit: number; dateKey: string }[] = [];
+    const now = new Date();
 
-      transactions.forEach(t => {
-          const tDate = new Date(t.date);
-          if (tDate > last7Days) {
-              const dayIndex = tDate.getDay();
-              if (t.type === 'CREDIT') {
-                  data[dayIndex].credit += t.amount;
-              } else {
-                  data[dayIndex].debit += t.amount;
-              }
-          }
-      });
-      return data;
-  };
+    if (chartRange === '1D') {
+        // Breakdown by 4-hour blocks for today
+        for (let i = 0; i < 24; i += 4) {
+            const startHour = i;
+            const endHour = i + 4;
+            const label = `${startHour}:00`;
+            
+            // Filter transactions for this specific block today
+            const blockDebit = transactions.reduce((sum, t) => {
+                const tDate = new Date(t.date);
+                const isToday = tDate.toDateString() === now.toDateString();
+                const inHourRange = tDate.getHours() >= startHour && tDate.getHours() < endHour;
+                return (isToday && inHourRange && t.type === 'DEBIT') ? sum + t.amount : sum;
+            }, 0);
 
-  const chartData = processChartData();
+            const blockCredit = transactions.reduce((sum, t) => {
+                const tDate = new Date(t.date);
+                const isToday = tDate.toDateString() === now.toDateString();
+                const inHourRange = tDate.getHours() >= startHour && tDate.getHours() < endHour;
+                return (isToday && inHourRange && t.type === 'CREDIT') ? sum + t.amount : sum;
+            }, 0);
+
+            data.push({ name: label, debit: blockDebit, credit: blockCredit, dateKey: label });
+        }
+    } 
+    else if (chartRange === '1W' || chartRange === '1M') {
+        const daysToLookBack = chartRange === '1W' ? 7 : 30;
+        
+        // Loop backwards from 0 (today) to 6 (7 days ago) or 29 (30 days ago)
+        // We actually want the loop to go from Oldest -> Newest for the graph X-Axis
+        for (let i = daysToLookBack - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(now.getDate() - i);
+            
+            const dayName = d.toLocaleDateString('en-US', { weekday: 'short' }); // "Mon"
+            const dateNum = d.getDate();
+            const label = chartRange === '1W' ? dayName : `${dateNum} ${dayName}`; // 1W: "Mon", 1M: "21 Mon"
+            const dateKey = d.toDateString(); // "Mon Dec 21 2025" for matching
+
+            const dayDebit = transactions.reduce((sum, t) => {
+                const tDate = new Date(t.date);
+                return (tDate.toDateString() === dateKey && t.type === 'DEBIT') ? sum + t.amount : sum;
+            }, 0);
+
+            const dayCredit = transactions.reduce((sum, t) => {
+                const tDate = new Date(t.date);
+                return (tDate.toDateString() === dateKey && t.type === 'CREDIT') ? sum + t.amount : sum;
+            }, 0);
+
+            data.push({ name: label, debit: dayDebit, credit: dayCredit, dateKey });
+        }
+    } 
+    else if (chartRange === '1Y') {
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date();
+            d.setMonth(now.getMonth() - i);
+            
+            const monthName = d.toLocaleDateString('en-US', { month: 'short' }); // "Dec"
+            const yearKey = d.getFullYear(); // 2025
+            
+            const monthDebit = transactions.reduce((sum, t) => {
+                const tDate = new Date(t.date);
+                return (tDate.getMonth() === d.getMonth() && tDate.getFullYear() === yearKey && t.type === 'DEBIT') ? sum + t.amount : sum;
+            }, 0);
+
+            const monthCredit = transactions.reduce((sum, t) => {
+                const tDate = new Date(t.date);
+                return (tDate.getMonth() === d.getMonth() && tDate.getFullYear() === yearKey && t.type === 'CREDIT') ? sum + t.amount : sum;
+            }, 0);
+
+            data.push({ name: monthName, debit: monthDebit, credit: monthCredit, dateKey: `${monthName}-${yearKey}` });
+        }
+    }
+
+    return data;
+  }, [transactions, chartRange]);
 
   // --- 3. VOICE MODE LOGIC ---
   const [isListening, setIsListening] = useState(false);
@@ -260,7 +324,6 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, userSettin
             SAVINGS HEALTH
           </h3>
           <div className="flex items-baseline space-x-2">
-            {/* Blurs percentage if privacy is on */}
             <span className={`text-5xl font-black tracking-tighter transition-all ${savingsHealth > 30 ? 'text-success' : 'text-danger'} ${isPrivacy ? 'blur-sm' : ''}`}>
               {savingsHealth}%
             </span>
@@ -272,7 +335,6 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, userSettin
               style={{ width: `${savingsHealth}%` }}
             ></div>
           </div>
-          {/* Uses formatMoney helper */}
           <p className="text-[10px] text-gray-500 mt-3 font-mono">
               UTILIZATION: {formatMoney(totalSpent)} / {formatMoney(totalLimit)}
           </p>
@@ -342,7 +404,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, userSettin
             </div>
         </div>
 
-        {/* TIME-VALUE CARD (PRIVACY ENABLED) */}
+        {/* TIME-VALUE CARD */}
         <div className="bg-surface border border-gray-700 rounded-2xl p-6 flex items-center justify-between hover:border-accent/50 transition-colors">
             <div>
                  <h3 className="text-gray-400 text-xs font-bold mb-1 tracking-widest uppercase flex items-center gap-2">
@@ -363,20 +425,38 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, userSettin
         </div>
       </div>
 
-      {/* MAIN CHART (PRIVACY ENABLED) */}
+      {/* 🆕 MAIN CHART (DYNAMIC & PRIVACY ENABLED) */}
       <div className="bg-surface border border-gray-700 rounded-2xl p-6 shadow-xl relative">
-        <div className="flex justify-between items-center mb-8">
-            <h3 className="text-gray-400 text-xs font-bold tracking-widest uppercase flex items-center gap-2">
-                <span className="text-gray-600 font-mono text-[10px]">#</span> REAL-TIME SPENDING OSCILLOSCOPE
-            </h3>
-            <div className="flex items-center gap-4 text-[10px] font-mono text-gray-500">
-                <div className="flex items-center gap-1">
-                    <span className="w-2 h-2 bg-success rounded-full"></span> CREDIT
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <div>
+                <h3 className="text-gray-400 text-xs font-bold tracking-widest uppercase flex items-center gap-2 mb-1">
+                    <span className="text-gray-600 font-mono text-[10px]">#</span> REAL-TIME SPENDING OSCILLOSCOPE
+                </h3>
+                <div className="flex items-center gap-4 text-[10px] font-mono text-gray-500">
+                    <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-success rounded-full"></span> CREDIT
+                    </div>
+                    <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 bg-danger rounded-full"></span> DEBIT
+                    </div>
                 </div>
-                <div className="flex items-center gap-1">
-                    <span className="w-2 h-2 bg-danger rounded-full"></span> DEBIT
-                </div>
-                <div className="flex items-center gap-1 ml-2 opacity-50">INTERVAL: 7D</div>
+            </div>
+
+            {/* 🆕 TIME RANGE TABS */}
+            <div className="flex bg-gray-800/50 p-1 rounded-lg border border-gray-700/50">
+                {(['1D', '1W', '1M', '1Y'] as ChartRange[]).map((range) => (
+                    <button
+                        key={range}
+                        onClick={() => setChartRange(range)}
+                        className={`px-3 py-1 text-[10px] font-bold rounded-md transition-all ${
+                            chartRange === range 
+                            ? 'bg-gray-700 text-white shadow-sm border border-gray-600' 
+                            : 'text-gray-500 hover:text-gray-300'
+                        }`}
+                    >
+                        {range}
+                    </button>
+                ))}
             </div>
         </div>
         
@@ -401,6 +481,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, userSettin
                     tickLine={false} 
                     axisLine={false} 
                     tick={{fontSize: 10, fontWeight: 700}}
+                    interval={chartRange === '1M' ? 3 : 0} // Skip ticks for month view to prevent clutter
                 />
                 <YAxis 
                     stroke="#475569" 
