@@ -149,7 +149,7 @@ const Dashboard: React.FC<DashboardProps> = ({ transactions, budgets, userSettin
             body: JSON.stringify({ 
                 transaction: { 
                     ...voiceResult.data, 
-                    date: new Date().toISOString().split('T')[0], 
+                    date: new Date().toISOString(), 
                     id: Date.now().toString(),
                     firewallReason: 'Voice Command'
                 }
